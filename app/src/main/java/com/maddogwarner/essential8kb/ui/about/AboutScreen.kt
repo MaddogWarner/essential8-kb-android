@@ -1,7 +1,9 @@
 package com.maddogwarner.essential8kb.ui.about
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -37,8 +39,12 @@ fun AboutScreen(
 ) {
     val context = LocalContext.current
     val openLink: (ReferenceLink) -> Unit = { reference ->
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(reference.url.toString()))
-        context.startActivity(intent)
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(reference.url))
+            context.startActivity(intent)
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(context, "No web browser found to open this link.", Toast.LENGTH_SHORT).show()
+        }
     }
 
     LazyColumn(
@@ -74,7 +80,7 @@ fun AboutScreen(
                 Text(AppInformation.aboutMeDescription)
             }
         }
-        items(AppInformation.authorLinks, key = { it.url.toString() }) { reference ->
+        items(AppInformation.authorLinks, key = { it.url }) { reference ->
             ReferenceRow(reference, Icons.Outlined.Person, openLink)
         }
 
@@ -91,7 +97,7 @@ fun AboutScreen(
         item {
             SectionHeader("References")
         }
-        items(AppInformation.referenceLinks, key = { it.url.toString() }) { reference ->
+        items(AppInformation.referenceLinks, key = { it.url }) { reference ->
             ReferenceRow(reference, Icons.Outlined.Link, openLink)
         }
         item {
@@ -110,7 +116,7 @@ private fun ReferenceRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: (ReferenceLink) -> Unit,
 ) {
-    val url = reference.url.toString()
+    val url = reference.url
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         modifier = Modifier

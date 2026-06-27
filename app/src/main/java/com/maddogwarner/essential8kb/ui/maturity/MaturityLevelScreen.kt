@@ -19,6 +19,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -44,7 +45,9 @@ fun MaturityLevelScreen(
     viewModel: MaturityLevelViewModel = viewModel(),
 ) {
     val completedCount = content.steps.count { it.id in completedStepIds }
-    val protections = viewModel.microsoft365Protections(control, level, selectedLicenseMode)
+    val protections = remember(control, level, selectedLicenseMode) {
+        viewModel.microsoft365Protections(control, level, selectedLicenseMode)
+    }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),

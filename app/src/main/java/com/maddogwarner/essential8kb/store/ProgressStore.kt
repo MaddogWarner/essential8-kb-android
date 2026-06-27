@@ -4,11 +4,14 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.maddogwarner.essential8kb.data.EssentialControl
 import com.maddogwarner.essential8kb.data.allStepIds
+import java.io.IOException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 
 val Context.essential8DataStore: DataStore<Preferences> by preferencesDataStore(
@@ -19,9 +22,17 @@ class ProgressStore(
     private val dataStore: DataStore<Preferences>,
 ) {
     val completedStepIds: Flow<Set<String>> =
-        dataStore.data.map { preferences ->
-            preferences[COMPLETED_STEP_IDS].orEmpty()
-        }
+        dataStore.data
+            .catch { exception ->
+                if (exception is IOException) {
+                    emit(emptyPreferences())
+                } else {
+                    throw exception
+                }
+            }
+            .map { preferences ->
+                preferences[COMPLETED_STEP_IDS].orEmpty()
+            }
 
     suspend fun toggle(stepId: String) {
         dataStore.edit { preferences ->

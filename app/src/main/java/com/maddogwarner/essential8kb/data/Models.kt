@@ -40,6 +40,10 @@ data class EssentialControl(
     val ml2: MaturityLevelContent,
     val ml3: MaturityLevelContent,
 ) {
+    val allStepIds: List<String> = listOf(ml1, ml2, ml3)
+        .flatMap { content -> content.steps }
+        .map { step -> step.id }
+
     fun content(forLevel: MaturityLevel): MaturityLevelContent = when (forLevel) {
         MaturityLevel.ML1 -> ml1
         MaturityLevel.ML2 -> ml2

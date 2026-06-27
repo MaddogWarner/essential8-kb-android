@@ -149,7 +149,7 @@ private fun RadioCard(
         ) {
             Icon(
                 imageVector = if (selected) Icons.Outlined.RadioButtonChecked else Icons.Outlined.RadioButtonUnchecked,
-                contentDescription = if (selected) "$title selected" else "$title not selected",
+                contentDescription = null,
                 tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.width(28.dp),
             )

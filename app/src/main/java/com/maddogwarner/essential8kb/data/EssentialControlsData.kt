@@ -15,16 +15,18 @@ private fun step(
 )
 
 object EssentialControlsData {
-    val all: List<EssentialControl> = listOf(
-        applicationControl,
-        patchApplications,
-        configureOfficeMacros,
-        userApplicationHardening,
-        restrictAdministrativePrivileges,
-        patchOperatingSystems,
-        multiFactorAuthentication,
-        regularBackups
-    )
+    val all: List<EssentialControl> by lazy {
+        listOf(
+            applicationControl,
+            patchApplications,
+            configureOfficeMacros,
+            userApplicationHardening,
+            restrictAdministrativePrivileges,
+            patchOperatingSystems,
+            multiFactorAuthentication,
+            regularBackups
+        )
+    }
 
     const val ml0GenericDescription: String =
         "ML0 means no controls implemented for this mitigation. The system is in its default state and the threats this control is designed to address are not mitigated."

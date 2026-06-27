@@ -111,7 +111,6 @@ object Microsoft365AdditionalControlsData {
             )
         else -> emptyList()
         }
-    }
 
     private fun p2IdentityProtections(controlID: Int, level: MaturityLevel): List<Microsoft365AdditionalProtection> =
         when (controlID) {
@@ -139,7 +138,6 @@ object Microsoft365AdditionalControlsData {
             )
         else -> emptyList()
         }
-    }
 
     private fun e5Protections(controlID: Int, level: MaturityLevel): List<Microsoft365AdditionalProtection> =
         when (controlID) {
@@ -233,5 +231,4 @@ object Microsoft365AdditionalControlsData {
             )
         else -> emptyList()
         }
-    }
 }
