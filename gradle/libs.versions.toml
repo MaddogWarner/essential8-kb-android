@@ -1,7 +1,7 @@
 [versions]
 agp = "9.1.0"
 kotlin = "2.2.20"
-androidxActivity = "1.12.0"
+androidxActivity = "1.13.0"
 androidxCore = "1.17.0"
 androidxDatastore = "1.2.0"
 androidxLifecycle = "2.10.0"
