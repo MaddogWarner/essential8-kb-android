@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.maddogwarner.essential8kb"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.maddogwarner.essential8kb"
