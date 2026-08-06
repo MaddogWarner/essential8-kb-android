@@ -1,9 +1,6 @@
 package com.maddogwarner.essential8kb
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
-import com.maddogwarner.essential8kb.data.Microsoft365LicenseMode
 import com.maddogwarner.essential8kb.store.SettingsStore
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
@@ -12,7 +9,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -22,34 +20,29 @@ class SettingsStoreTest {
     val temporaryFolder = TemporaryFolder()
 
     @Test
-    fun licenseModeRoundTripsUsingIosRawValue() = runBlocking {
+    fun globalFeaturePreferencesRoundTrip() = runBlocking {
         val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         val dataStore = PreferenceDataStoreFactory.create(
             scope = scope,
-            produceFile = { File(temporaryFolder.root, "settings.preferences_pb") },
+            produceFile = { File(temporaryFolder.root, "global-settings.preferences_pb") },
         )
         val store = SettingsStore(dataStore)
 
-        store.setLicenseMode(Microsoft365LicenseMode.E3_P2)
+        assertTrue(store.showSplashOnStartup.first())
+        assertFalse(store.referenceOnlyMode.first())
+        assertFalse(store.deepAuditEnabled.first())
+        assertFalse(store.multiProfileEnabled.first())
 
-        assertEquals(Microsoft365LicenseMode.E3_P2, store.licenseMode.first())
-        scope.cancel()
-    }
+        store.setShowSplashOnStartup(false)
+        store.setReferenceOnlyMode(true)
+        store.setDeepAuditEnabled(true)
+        store.setMultiProfileEnabled(true)
 
-    @Test
-    fun unexpectedLicenseModeFallsBackToNone() = runBlocking {
-        val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-        val dataStore = PreferenceDataStoreFactory.create(
-            scope = scope,
-            produceFile = { File(temporaryFolder.root, "invalid-settings.preferences_pb") },
-        )
-        val key = stringPreferencesKey("microsoft365LicenseMode")
-        dataStore.edit { preferences ->
-            preferences[key] = "unexpected"
-        }
-        val store = SettingsStore(dataStore)
+        assertFalse(store.showSplashOnStartup.first())
+        assertTrue(store.referenceOnlyMode.first())
+        assertTrue(store.deepAuditEnabled.first())
+        assertTrue(store.multiProfileEnabled.first())
 
-        assertEquals(Microsoft365LicenseMode.NONE, store.licenseMode.first())
         scope.cancel()
     }
 }

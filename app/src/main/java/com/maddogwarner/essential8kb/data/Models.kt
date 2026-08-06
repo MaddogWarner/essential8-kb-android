@@ -40,6 +40,18 @@ data class EssentialControl(
     val ml2: MaturityLevelContent,
     val ml3: MaturityLevelContent,
 ) {
+    val shortName: String get() = when (id) {
+        1 -> "AC"
+        2 -> "PA"
+        3 -> "OM"
+        4 -> "UH"
+        5 -> "RA"
+        6 -> "OS"
+        7 -> "MFA"
+        8 -> "RB"
+        else -> ""
+    }
+
     val allStepIds: List<String> = listOf(ml1, ml2, ml3)
         .flatMap { content -> content.steps }
         .map { step -> step.id }
@@ -48,6 +60,25 @@ data class EssentialControl(
         MaturityLevel.ML1 -> ml1
         MaturityLevel.ML2 -> ml2
         MaturityLevel.ML3 -> ml3
+    }
+
+    fun steps(upTo: MaturityLevel): List<ImplementationStep> =
+        MaturityLevel.entries.filter { it.level <= upTo.level }
+            .flatMap { level -> content(level).steps }
+
+    fun steps(upTo: MaturityLevel, scope: OSScope): List<ImplementationStep> =
+        steps(upTo).filter { step -> step.matches(scope) }
+}
+
+/** Where an implementation step applies. BOTH is the safe default — only tag
+ * WORKSTATION or SERVER when the content is unambiguous. */
+enum class OSScope(val rawValue: String) {
+    WORKSTATION("workstation"),
+    SERVER("server"),
+    BOTH("both");
+
+    companion object {
+        fun fromRawValue(v: String?): OSScope = entries.firstOrNull { it.rawValue == v } ?: BOTH
     }
 }
 
@@ -58,6 +89,9 @@ enum class MaturityLevel(val level: Int) {
 
     val shortName: String get() = "ML$level"
     val displayName: String get() = "Maturity Level $level"
+
+    val cumulativeLevels: List<MaturityLevel> get() =
+        entries.filter { it.level <= level }
 }
 
 data class MaturityLevelContent(
@@ -71,7 +105,12 @@ data class ImplementationStep(
     val title: String,
     val description: String,
     val technicalDetails: List<String>,
+    val ismControls: List<String> = emptyList(),
+    val osScope: OSScope = OSScope.BOTH,
 )
+
+fun ImplementationStep.matches(filter: OSScope): Boolean =
+    filter == OSScope.BOTH || osScope == OSScope.BOTH || osScope == filter
 
 enum class AuditRecommendation(val label: String) {
     SUCCESS("Success"),

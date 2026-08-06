@@ -16,7 +16,7 @@ Native Android port of the iOS app *Essential 8 Knowledge Base* — an offline A
 - **App ID:** `com.maddogwarner.essential8kb`
 - **Repo name:** `essential8-kb-android`
 - **UI:** Material 3, Material You dynamic colour, Material icons — no iOS chrome mimicry
-- **Scope:** Feature parity + copy-to-clipboard on every command/GPO/registry/PowerShell snippet; no search
+- **Scope:** Feature parity (including Global Search, target maturity selection, compliance dashboard, splash walkthrough onboarding, and Reference Only Mode) + copy-to-clipboard on every command/GPO/registry/PowerShell snippet
 - **Licence:** MIT, `Copyright (c) 2026 MaddogWarner`
 - **Icon:** adaptive-icon placeholder (shield / "E8" motif); final art swapped later
 

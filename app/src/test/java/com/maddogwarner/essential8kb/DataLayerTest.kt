@@ -5,8 +5,10 @@ import com.maddogwarner.essential8kb.data.EssentialControlsData
 import com.maddogwarner.essential8kb.data.MaturityLevel
 import com.maddogwarner.essential8kb.data.Microsoft365AdditionalControlsData
 import com.maddogwarner.essential8kb.data.Microsoft365LicenseMode
+import com.maddogwarner.essential8kb.data.OSScope
 import com.maddogwarner.essential8kb.data.WindowsAuditPolicyData
 import com.maddogwarner.essential8kb.data.allStepIds
+import com.maddogwarner.essential8kb.data.matches
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -125,12 +127,11 @@ class DataLayerTest {
 
     @Test
     fun aboutAndReferencesMatchAppScope() {
+        val expectedPrivacyPolicy = "Essential 8 Knowledge Base has no accounts, no analytics, and makes no network requests of its own — nothing you enter is ever sent to the developer or any third party. Your assessment progress, notes and audit history are stored only on your device. That data leaves your device only if you export a backup yourself, or through your device's own system backup. External reference links open in your browser. The app does not request access to the microphone, camera, location services, contacts, photos, or other device sensors."
+
         assertTrue(AppInformation.aboutDescription.contains("administrators"))
         assertTrue(AppInformation.aboutDescription.contains("quick reference"))
-        assertTrue(AppInformation.privacyPolicy.contains("does not collect"))
-        assertTrue(AppInformation.privacyPolicy.contains("microphone"))
-        assertTrue(AppInformation.privacyPolicy.contains("camera"))
-        assertTrue(AppInformation.privacyPolicy.contains("location services"))
+        assertEquals(expectedPrivacyPolicy, AppInformation.privacyPolicy)
 
         val urls = AppInformation.referenceLinks.map { it.url }
         assertTrue(urls.any { it.contains("cyber.gov.au") && it.contains("essential-eight") })
@@ -138,5 +139,66 @@ class DataLayerTest {
         assertTrue(urls.any { it.contains("learn.microsoft.com") && it.contains("defender-endpoint") })
         assertTrue(urls.any { it.contains("learn.microsoft.com") && it.contains("conditional-access") })
         assertFalse(AppInformation.referenceLinks.any { it.hostDisplayName.isBlank() })
+    }
+
+    @Test
+    fun maturityLevelCumulativeLevels() {
+        assertEquals(listOf(MaturityLevel.ML1), MaturityLevel.ML1.cumulativeLevels)
+        assertEquals(listOf(MaturityLevel.ML1, MaturityLevel.ML2), MaturityLevel.ML2.cumulativeLevels)
+        assertEquals(listOf(MaturityLevel.ML1, MaturityLevel.ML2, MaturityLevel.ML3), MaturityLevel.ML3.cumulativeLevels)
+    }
+
+    @Test
+    fun essentialControlStepsUpTo() {
+        val control = EssentialControlsData.applicationControl
+        assertEquals(control.ml1.steps.size, control.steps(MaturityLevel.ML1).size)
+        assertEquals(
+            control.ml1.steps.size + control.ml2.steps.size,
+            control.steps(MaturityLevel.ML2).size
+        )
+        assertEquals(
+            control.ml1.steps.size + control.ml2.steps.size + control.ml3.steps.size,
+            control.steps(MaturityLevel.ML3).size
+        )
+    }
+
+    @Test
+    fun osScopeCountsMatchIosSource() {
+        val steps = EssentialControlsData.all.flatMap { it.steps(MaturityLevel.ML3) }
+
+        assertEquals(16, steps.count { it.osScope == OSScope.WORKSTATION })
+        assertEquals(2, steps.count { it.osScope == OSScope.SERVER })
+        assertEquals(49, steps.count { it.osScope == OSScope.BOTH })
+        assertEquals(67, steps.size)
+        assertEquals(65, EssentialControlsData.all.sumOf { it.steps(MaturityLevel.ML3, OSScope.WORKSTATION).size })
+    }
+
+    @Test
+    fun osScopeMatchesTruthTable() {
+        OSScope.entries.forEach { stepScope ->
+            val step = EssentialControlsData.applicationControl.ml1.steps.first().copy(osScope = stepScope)
+            OSScope.entries.forEach { filter ->
+                val expected = filter == OSScope.BOTH || stepScope == OSScope.BOTH || stepScope == filter
+                assertEquals("step=$stepScope filter=$filter", expected, step.matches(filter))
+            }
+        }
+    }
+
+    @Test
+    fun ismControlsMappingFormatAndPreservation() {
+        val controls = EssentialControlsData.all
+        val allSteps = controls.flatMap { ctrl ->
+            MaturityLevel.entries.flatMap { lvl -> ctrl.content(lvl).steps }
+        }
+
+        // Sweeper: every step's ismControls maps to ^ISM-\d{4}$
+        allSteps.forEach { step ->
+            step.ismControls.forEach { id ->
+                assertTrue("Invalid ISM ID format: $id", id.matches(Regex("^ISM-\\d{4}$")))
+            }
+        }
+
+        // Preservation check: at least one step has a non-empty mapping
+        assertTrue(allSteps.any { it.ismControls.isNotEmpty() })
     }
 }

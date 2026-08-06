@@ -2,10 +2,9 @@ package com.maddogwarner.essential8kb.store
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
-import androidx.datastore.preferences.core.stringPreferencesKey
-import com.maddogwarner.essential8kb.data.Microsoft365LicenseMode
 import java.io.IOException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -14,7 +13,7 @@ import kotlinx.coroutines.flow.map
 class SettingsStore(
     private val dataStore: DataStore<Preferences>,
 ) {
-    val licenseMode: Flow<Microsoft365LicenseMode> =
+    val showSplashOnStartup: Flow<Boolean> =
         dataStore.data
             .catch { exception ->
                 if (exception is IOException) {
@@ -24,16 +23,57 @@ class SettingsStore(
                 }
             }
             .map { preferences ->
-            Microsoft365LicenseMode.fromRawValue(preferences[LICENSE_MODE_KEY])
-        }
+                preferences[SHOW_SPLASH_ON_STARTUP_KEY] != false
+            }
 
-    suspend fun setLicenseMode(mode: Microsoft365LicenseMode) {
+    val referenceOnlyMode: Flow<Boolean> =
+        dataStore.data
+            .catch { exception ->
+                if (exception is IOException) {
+                    emit(emptyPreferences())
+                } else {
+                    throw exception
+                }
+            }
+            .map { preferences ->
+                preferences[REFERENCE_ONLY_MODE_KEY] == true
+            }
+
+    val deepAuditEnabled: Flow<Boolean> = booleanSetting(DEEP_AUDIT_ENABLED_KEY)
+
+    val multiProfileEnabled: Flow<Boolean> = booleanSetting(MULTI_PROFILE_ENABLED_KEY)
+
+    suspend fun setShowSplashOnStartup(show: Boolean) {
         dataStore.edit { preferences ->
-            preferences[LICENSE_MODE_KEY] = mode.rawValue
+            preferences[SHOW_SPLASH_ON_STARTUP_KEY] = show
         }
     }
 
+    suspend fun setReferenceOnlyMode(referenceOnly: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[REFERENCE_ONLY_MODE_KEY] = referenceOnly
+        }
+    }
+
+    suspend fun setDeepAuditEnabled(enabled: Boolean) {
+        dataStore.edit { preferences -> preferences[DEEP_AUDIT_ENABLED_KEY] = enabled }
+    }
+
+    suspend fun setMultiProfileEnabled(enabled: Boolean) {
+        dataStore.edit { preferences -> preferences[MULTI_PROFILE_ENABLED_KEY] = enabled }
+    }
+
+    private fun booleanSetting(key: Preferences.Key<Boolean>): Flow<Boolean> =
+        dataStore.data
+            .catch { exception ->
+                if (exception is IOException) emit(emptyPreferences()) else throw exception
+            }
+            .map { preferences -> preferences[key] == true }
+
     companion object {
-        private val LICENSE_MODE_KEY = stringPreferencesKey("microsoft365LicenseMode")
+        private val SHOW_SPLASH_ON_STARTUP_KEY = booleanPreferencesKey("showSplashOnStartup")
+        private val REFERENCE_ONLY_MODE_KEY = booleanPreferencesKey("referenceOnlyMode")
+        private val DEEP_AUDIT_ENABLED_KEY = booleanPreferencesKey("deepAuditEnabled")
+        private val MULTI_PROFILE_ENABLED_KEY = booleanPreferencesKey("multiProfileEnabled")
     }
 }

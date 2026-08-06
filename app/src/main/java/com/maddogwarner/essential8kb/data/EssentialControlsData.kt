@@ -1,3 +1,7 @@
+/*
+ * Reference content drawn from the ASD Essential Eight Maturity Model (November 2023).
+ * ISM mapping source: ASD Essential Eight maturity model and ISM mapping (October 2024).
+ */
 package com.maddogwarner.essential8kb.data
 
 private fun step(
@@ -7,11 +11,15 @@ private fun step(
     title: String,
     description: String,
     technicalDetails: List<String> = emptyList(),
+    ismControls: List<String> = emptyList(),
+    osScope: OSScope = OSScope.BOTH,
 ): ImplementationStep = ImplementationStep(
     id = "$controlID-${level.level}-$index",
     title = title,
     description = description,
     technicalDetails = technicalDetails,
+    ismControls = ismControls,
+    osScope = osScope,
 )
 
 object EssentialControlsData {
@@ -43,14 +51,16 @@ object EssentialControlsData {
             summary = "Application control enforced on workstations, restricting execution from standard user profile directories and temporary folders.",
             steps = listOf(
                 step(1, MaturityLevel.ML1, 0,
+                    ismControls = listOf("ISM-0843", "ISM-1870", "ISM-1657"),
                     title = "Enable the Application Identity service",
                     description = "AppLocker depends on the AppIDSvc service. Set it to start automatically on all in-scope workstations.",
                     technicalDetails = listOf(
-                        "Command: sc config AppIDSvc start= auto",
+                        "Command: sc config AppIDSvc start= auto (Note: returns Access Denied on Windows 10 1809+, use GPO instead)",
                         "GPO: Computer Configuration → Windows Settings → Security Settings → System Services → Application Identity = Automatic"
                     )
                 ),
                 step(1, MaturityLevel.ML1, 1,
+                    ismControls = listOf("ISM-0843", "ISM-1657"),
                     title = "Create AppLocker default rules",
                     description = "Generate the default allow rules for each rule collection so signed Windows and Program Files binaries continue to run.",
                     technicalDetails = listOf(
@@ -60,12 +70,12 @@ object EssentialControlsData {
                     )
                 ),
                 step(1, MaturityLevel.ML1, 2,
+                    ismControls = listOf("ISM-1870", "ISM-1657"),
                     title = "Block execution from user-writable locations",
                     description = "Default rules already deny anything outside Windows and Program Files for standard users. Verify and add explicit deny rules for %TEMP%, %LOCALAPPDATA% and the user profile root if custom paths exist.",
                     technicalDetails = listOf(
                         "Deny path: %OSDRIVE%\\Users\\*",
-                        "Deny path: %LOCALAPPDATA%\\Temp\\*",
-                        "Deny path: %TEMP%\\*"
+                        "Deny path: %OSDRIVE%\\Users\\*\\AppData\\Local\\Temp\\* (covers %TEMP% and %LOCALAPPDATA%\\Temp)"
                     )
                 ),
                 step(1, MaturityLevel.ML1, 3,
@@ -83,6 +93,7 @@ object EssentialControlsData {
             summary = "Application control also enforced on internet-facing servers, with execution events centrally logged.",
             steps = listOf(
                 step(1, MaturityLevel.ML2, 0,
+                    ismControls = listOf("ISM-1490", "ISM-1870", "ISM-1871", "ISM-1657"),
                     title = "Extend AppLocker enforcement to servers",
                     description = "Apply the same allow-listing policy to internet-facing Windows servers. Test in audit mode first to identify business-required binaries outside Program Files.",
                     technicalDetails = listOf(
@@ -91,6 +102,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(1, MaturityLevel.ML2, 1,
+                    ismControls = listOf("ISM-1490", "ISM-1871", "ISM-1657"),
                     title = "Deploy Windows Defender Application Control (WDAC)",
                     description = "WDAC provides stronger, kernel-level enforcement than AppLocker and survives admin tampering. Build a base policy from a clean reference machine.",
                     technicalDetails = listOf(
@@ -100,6 +112,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(1, MaturityLevel.ML2, 2,
+                    ismControls = listOf("ISM-1660"),
                     title = "Forward AppLocker / WDAC events centrally",
                     description = "Use Windows Event Forwarding to ship execution and block events to a collector for retention and analysis.",
                     technicalDetails = listOf(
@@ -114,6 +127,7 @@ object EssentialControlsData {
             summary = "Application control on all workstations and servers, with Microsoft's recommended block rules and vulnerable driver blocklist enforced.",
             steps = listOf(
                 step(1, MaturityLevel.ML3, 0,
+                    ismControls = listOf("ISM-1544"),
                     title = "Apply Microsoft's recommended block rules",
                     description = "Microsoft publishes a list of well-known binaries (e.g. bash.exe, cdb.exe, cscript.exe variants) that bypass application control. Merge these into your WDAC policy.",
                     technicalDetails = listOf(
@@ -122,6 +136,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(1, MaturityLevel.ML3, 1,
+                    ismControls = listOf("ISM-1659"),
                     title = "Enable the vulnerable driver blocklist",
                     description = "Windows ships with a Microsoft-maintained list of known-vulnerable drivers. Enabling this prevents loading drivers commonly abused for BYOVD attacks.",
                     technicalDetails = listOf(
@@ -130,6 +145,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(1, MaturityLevel.ML3, 2,
+                    ismControls = listOf("ISM-1896"),
                     title = "Enforce Memory Integrity (HVCI)",
                     description = "Hypervisor-protected Code Integrity ensures only signed kernel code can run, complementing WDAC for user-mode code.",
                     technicalDetails = listOf(
@@ -154,22 +170,27 @@ object EssentialControlsData {
             summary = "Office productivity, browsers, email and security products patched within one month; internet-facing services within two weeks (or 48 hours where an exploit exists). Unsupported applications removed.",
             steps = listOf(
                 step(2, MaturityLevel.ML1, 0,
+                    ismControls = listOf("ISM-1691"),
                     title = "Enable Microsoft Update for Office",
                     description = "Lets Office (M365 Apps / Office 2021+) receive updates automatically through the Microsoft Update channel.",
+                    osScope = OSScope.WORKSTATION,
                     technicalDetails = listOf(
                         "GPO: Computer Configuration → Administrative Templates → Microsoft Office (Machine) → Updates → Enable Automatic Updates = Enabled",
                         "GPO: Update Channel = Monthly Enterprise Channel (or Current Channel for faster cadence)"
                     )
                 ),
                 step(2, MaturityLevel.ML1, 1,
+                    ismControls = listOf("ISM-1691"),
                     title = "Enable Microsoft Edge auto-update",
                     description = "Edge updates ship through its own updater service. Keep the override allowing updates in place.",
+                    osScope = OSScope.WORKSTATION,
                     technicalDetails = listOf(
                         "GPO: Computer Configuration → Administrative Templates → Microsoft Edge Update → Applications → Microsoft Edge → Update policy override = Always allow updates",
                         "Registry: HKLM\\SOFTWARE\\Policies\\Microsoft\\EdgeUpdate → UpdateDefault = 1 (DWORD)"
                     )
                 ),
                 step(2, MaturityLevel.ML1, 2,
+                    ismControls = listOf("ISM-1807"),
                     title = "Inventory installed applications",
                     description = "You can't patch what you can't see. Use built-in tools to enumerate installed software across the fleet.",
                     technicalDetails = listOf(
@@ -179,6 +200,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(2, MaturityLevel.ML1, 3,
+                    ismControls = listOf("ISM-1704"),
                     title = "Uninstall unsupported applications",
                     description = "Vendor-unsupported software (e.g. legacy Java, Flash, end-of-life Office versions) must be removed.",
                     technicalDetails = listOf(
@@ -193,14 +215,17 @@ object EssentialControlsData {
             summary = "Office productivity, browsers, email and security products patched within two weeks. Internet-facing services patched within two weeks (or 48 hours if an exploit exists).",
             steps = listOf(
                 step(2, MaturityLevel.ML2, 0,
+                    ismControls = listOf("ISM-1691"),
                     title = "Tighten Office and Edge update cadence",
                     description = "Move M365 Apps to Current Channel for faster security update delivery, and shorten deferral windows.",
+                    osScope = OSScope.WORKSTATION,
                     technicalDetails = listOf(
                         "GPO: Microsoft Office (Machine) → Updates → Update Channel = Current Channel",
                         "GPO: Microsoft Edge Update → Auto-update check period override = 60 minutes or less"
                     )
                 ),
                 step(2, MaturityLevel.ML2, 1,
+                    ismControls = listOf("ISM-1691", "ISM-1693"),
                     title = "Enforce restart deadlines",
                     description = "Patches only mitigate once they are applied and the machine has restarted. Configure short deadlines for restart.",
                     technicalDetails = listOf(
@@ -215,6 +240,7 @@ object EssentialControlsData {
             summary = "Internet-facing services patched within 48 hours when an exploit exists, otherwise within two weeks. Daily vulnerability scanning.",
             steps = listOf(
                 step(2, MaturityLevel.ML3, 0,
+                    ismControls = listOf("ISM-1692"),
                     title = "Emergency patch deployment",
                     description = "When an exploited vulnerability is disclosed, push the patch immediately using WSUS / Windows Update for Business deadline of zero days.",
                     technicalDetails = listOf(
@@ -239,25 +265,31 @@ object EssentialControlsData {
             summary = "Macros disabled for users without a documented business need. Macros from internet-sourced files blocked. Macro security settings cannot be changed by users.",
             steps = listOf(
                 step(3, MaturityLevel.ML1, 0,
+                    ismControls = listOf("ISM-1488"),
                     title = "Block macros from the internet (Mark-of-the-Web)",
                     description = "Office blocks macros in files that carry the internet zone identifier. Enable the policy for each Office app.",
+                    osScope = OSScope.WORKSTATION,
                     technicalDetails = listOf(
                         "GPO: User Configuration → Administrative Templates → Microsoft <App> <Version> → <App> Options → Security → Trust Center → Block macros from running in Office files from the Internet = Enabled",
                         "Registry: HKCU\\Software\\Policies\\Microsoft\\Office\\16.0\\<app>\\Security → blockcontentexecutionfrominternet = 1 (DWORD)",
-                        "Apply for each of: word, excel, powerpoint, outlook, access, visio, project, publisher"
+                        "Apply block policy for: word, excel, powerpoint, access, visio (Outlook, Project, and Publisher do not support this policy)"
                     )
                 ),
                 step(3, MaturityLevel.ML1, 1,
+                    ismControls = listOf("ISM-1671"),
                     title = "Disable VBA macros without notification",
                     description = "For users without a business requirement, the VBA Macro Notification Setting should be 'Disabled without notification' so no UI bypass is shown.",
+                    osScope = OSScope.WORKSTATION,
                     technicalDetails = listOf(
                         "GPO: User Configuration → Administrative Templates → Microsoft <App> <Version> → <App> Options → Security → Trust Center → VBA Macro Notification Settings = Disabled without notification",
                         "Registry: HKCU\\Software\\Policies\\Microsoft\\Office\\16.0\\<app>\\Security → vbawarnings = 4 (DWORD)"
                     )
                 ),
                 step(3, MaturityLevel.ML1, 2,
+                    ismControls = listOf("ISM-1489"),
                     title = "Lock down the Trust Center",
                     description = "Stop users adding trusted locations / trusted publishers themselves.",
+                    osScope = OSScope.WORKSTATION,
                     technicalDetails = listOf(
                         "GPO: <App> Options → Security → Trust Center → Disable all trusted locations = Enabled (or restrict to administrator-defined locations only)",
                         "Registry: HKCU\\Software\\Policies\\Microsoft\\Office\\16.0\\<app>\\Security\\Trusted Locations → AllLocationsDisabled = 1"
@@ -270,16 +302,20 @@ object EssentialControlsData {
             summary = "Macros only run from Trusted Locations (with write access limited to approvers) or where digitally signed by a trusted publisher. Antivirus scanning of macros enabled. Macro execution events logged.",
             steps = listOf(
                 step(3, MaturityLevel.ML2, 0,
+                    ismControls = listOf("ISM-1674", "ISM-1675"),
                     title = "Allow only digitally signed macros",
                     description = "Set the macro notification setting so only macros signed by a trusted publisher run silently; all others are blocked.",
+                    osScope = OSScope.WORKSTATION,
                     technicalDetails = listOf(
                         "GPO: <App> Options → Security → Trust Center → VBA Macro Notification Settings = Disable all except digitally signed macros",
                         "Registry: HKCU\\Software\\Policies\\Microsoft\\Office\\16.0\\<app>\\Security → vbawarnings = 3 (DWORD)"
                     )
                 ),
                 step(3, MaturityLevel.ML2, 1,
+                    ismControls = listOf("ISM-1672"),
                     title = "Enable AMSI scanning of macros",
                     description = "Office passes macro contents to AMSI so Microsoft Defender (or another AMSI provider) can inspect them before execution.",
+                    osScope = OSScope.WORKSTATION,
                     technicalDetails = listOf(
                         "GPO: User Configuration → Administrative Templates → Microsoft <App> → Security Settings → Macro Runtime Scan Scope = Enable for all documents",
                         "Registry: HKCU\\Software\\Policies\\Microsoft\\Office\\16.0\\<app>\\Security → MacroRuntimeScanScope = 2 (DWORD)"
@@ -288,6 +324,7 @@ object EssentialControlsData {
                 step(3, MaturityLevel.ML2, 2,
                     title = "Enable VBA macro logging",
                     description = "Office writes macro execution events to the Windows Application event log, source 'Microsoft Office <ver>'.",
+                    osScope = OSScope.WORKSTATION,
                     technicalDetails = listOf(
                         "Registry: HKCU\\Software\\Policies\\Microsoft\\Office\\16.0\\Common\\Security → EnableLogging = 1 (DWORD)",
                         "Event log: Windows Logs → Application, Source = Microsoft Office <ver>"
@@ -300,8 +337,10 @@ object EssentialControlsData {
             summary = "Macros only run when signed with a V3 signature by a trusted publisher. Write access to trusted locations restricted to vetted personnel. Macro events centrally logged and analysed.",
             steps = listOf(
                 step(3, MaturityLevel.ML3, 0,
+                    ismControls = listOf("ISM-1891"),
                     title = "Require V3 (XML-DSig) signatures",
                     description = "V3 signatures cover VBA projects more completely than legacy signatures. After re-signing approved VBA projects, enable the Office policy that only trusts V3-signed macros.",
+                    osScope = OSScope.WORKSTATION,
                     technicalDetails = listOf(
                         "GPO: User Configuration → Policies → Administrative Templates → Microsoft Office 2016 → Security Settings → Trust Center → Only trust VBA macros that use V3 signatures = Enabled",
                         "Office Cloud Policy Service: Only trust VBA macros that use V3 signatures = Enabled",
@@ -309,8 +348,10 @@ object EssentialControlsData {
                     )
                 ),
                 step(3, MaturityLevel.ML3, 1,
+                    ismControls = listOf("ISM-1487"),
                     title = "Restrict write access to Trusted Locations",
                     description = "Trusted Locations should live on a network share where NTFS ACLs restrict write to a small approval group; users have read-only access.",
+                    osScope = OSScope.WORKSTATION,
                     technicalDetails = listOf(
                         "icacls \\\\fileserver\\Macros /grant 'DOMAIN\\MacroApprovers:(M)' /grant 'DOMAIN\\Domain Users:(RX)' /inheritance:r"
                     )
@@ -332,8 +373,10 @@ object EssentialControlsData {
             summary = "Browsers do not process Java or web advertisements from the internet. Internet Explorer 11 disabled or removed. Browser settings cannot be changed by users.",
             steps = listOf(
                 step(4, MaturityLevel.ML1, 0,
+                    ismControls = listOf("ISM-1654"),
                     title = "Disable Internet Explorer 11",
                     description = "IE 11 is unsupported and should be blocked from launching as a standalone browser.",
+                    osScope = OSScope.WORKSTATION,
                     technicalDetails = listOf(
                         "GPO: Computer Configuration → Administrative Templates → Windows Components → Internet Explorer → Disable Internet Explorer 11 as a standalone browser = Enabled, never notify",
                         "Registry: HKLM\\SOFTWARE\\Policies\\Microsoft\\Internet Explorer\\Main → DisableInternetExplorerApp = 1 (DWORD)",
@@ -341,28 +384,33 @@ object EssentialControlsData {
                     )
                 ),
                 step(4, MaturityLevel.ML1, 1,
+                    ismControls = listOf("ISM-1486"),
                     title = "Block Java in Microsoft Edge",
                     description = "Edge does not process Java applets natively. Ensure no third-party Java plugin is installed and that NPAPI/legacy plugin support remains disabled.",
+                    osScope = OSScope.WORKSTATION,
                     technicalDetails = listOf(
                         "PowerShell: Get-Package -Name '*Java*' | Uninstall-Package",
-                        "GPO: Microsoft Edge → Block third party cookies = Enabled (defence in depth)"
+                        "GPO: Microsoft Edge → ExtensionInstallBlocklist = * (Block all extensions by default to prevent custom Java helpers)"
                     )
                 ),
                 step(4, MaturityLevel.ML1, 2,
+                    ismControls = listOf("ISM-1485", "ISM-1585"),
                     title = "Block web advertisements",
-                    description = "Use Edge's built-in tracking prevention at Strict, which also blocks the majority of ad networks.",
+                    description = "Use Edge's built-in tracking prevention at Strict, which also blocks many tracking-based ad networks.",
+                    osScope = OSScope.WORKSTATION,
                     technicalDetails = listOf(
                         "GPO: Computer Configuration → Administrative Templates → Microsoft Edge → Tracking prevention = Strict",
                         "Registry: HKLM\\SOFTWARE\\Policies\\Microsoft\\Edge → TrackingPrevention = 3 (DWORD)"
                     )
                 )
             ),
-            gapNote = null
+            gapNote = "Edge Tracking Prevention in Strict mode blocks many tracking networks, but does not provide complete ad-blocking compliance. An enterprise ad-blocking extension or DNS filter is required."
         ),
         ml2 = MaturityLevelContent(
             summary = "Microsoft Office is prevented from creating child processes. PowerShell module and script-block logging enabled. Attack Surface Reduction rules deployed.",
             steps = listOf(
                 step(4, MaturityLevel.ML2, 0,
+                    ismControls = listOf("ISM-1623"),
                     title = "Enable PowerShell logging",
                     description = "Module logging captures pipeline execution; script-block logging captures the actual code, including obfuscated scripts after de-obfuscation.",
                     technicalDetails = listOf(
@@ -372,8 +420,10 @@ object EssentialControlsData {
                     )
                 ),
                 step(4, MaturityLevel.ML2, 1,
+                    ismControls = listOf("ISM-1667", "ISM-1668", "ISM-1669"),
                     title = "Deploy Attack Surface Reduction rules",
                     description = "ASR rules are part of Microsoft Defender Antivirus. Start in audit mode, review event log, then enforce.",
+                    osScope = OSScope.WORKSTATION,
                     technicalDetails = listOf(
                         "PowerShell: Add-MpPreference -AttackSurfaceReductionRules_Ids D4F940AB-401B-4EFC-AADC-AD5F3C50688A -AttackSurfaceReductionRules_Actions Enabled  # Block Office apps from creating child processes",
                         "Other key rules: BE9BA2D9-53EA-4CDC-84E5-9B1EEEE46550 (block executable content from email), 3B576869-A4EC-4529-8536-B80A7769E899 (block Office from creating executables)",
@@ -381,6 +431,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(4, MaturityLevel.ML2, 2,
+                    ismControls = listOf("ISM-1889"),
                     title = "Enable command-line process auditing",
                     description = "Captures the full command line for every process creation event (4688), essential for incident response.",
                     technicalDetails = listOf(
@@ -395,6 +446,7 @@ object EssentialControlsData {
             summary = "PowerShell v2 disabled. PowerShell constrained language mode enforced. .NET Framework 3.5 (and earlier) removed where not required.",
             steps = listOf(
                 step(4, MaturityLevel.ML3, 0,
+                    ismControls = listOf("ISM-1621"),
                     title = "Remove PowerShell v2",
                     description = "Windows PowerShell 2.0 lacks modern logging and AMSI integration, making it a common downgrade target.",
                     technicalDetails = listOf(
@@ -403,6 +455,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(4, MaturityLevel.ML3, 1,
+                    ismControls = listOf("ISM-1622"),
                     title = "Enforce Constrained Language Mode",
                     description = "Restricts PowerShell to a safer subset of language elements, blocking arbitrary .NET method invocation. Microsoft documents application control policy enforcement as the durable way to place PowerShell in Constrained Language Mode.",
                     technicalDetails = listOf(
@@ -412,6 +465,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(4, MaturityLevel.ML3, 2,
+                    ismControls = listOf("ISM-1655"),
                     title = "Remove legacy .NET Framework",
                     description = ".NET 3.5 (which includes 2.0) supports older, weaker crypto and is rarely needed on modern endpoints.",
                     technicalDetails = listOf(
@@ -435,6 +489,7 @@ object EssentialControlsData {
             summary = "Requests for privileged access validated on first request and reviewed annually. Privileged users have a separate unprivileged account for email and web browsing. Privileged accounts cannot access the internet, email or external web services.",
             steps = listOf(
                 step(5, MaturityLevel.ML1, 0,
+                    ismControls = listOf("ISM-1508"),
                     title = "Remove standard users from local Administrators",
                     description = "Day-to-day user accounts must not be members of the local Administrators group on their workstation.",
                     technicalDetails = listOf(
@@ -443,6 +498,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(5, MaturityLevel.ML1, 1,
+                    ismControls = listOf("ISM-1685"),
                     title = "Deploy Windows LAPS",
                     description = "Windows LAPS is built into Windows 11 22H2+ and Windows Server 2019+ (via update). It randomises and rotates the local administrator password and stores it in AD or Entra ID.",
                     technicalDetails = listOf(
@@ -452,6 +508,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(5, MaturityLevel.ML1, 2,
+                    ismControls = listOf("ISM-1175", "ISM-1883"),
                     title = "Block internet / email for privileged accounts",
                     description = "Use Group Policy 'Deny logon' rights to prevent admin accounts authenticating to email, web proxy and internet-connected workstations.",
                     technicalDetails = listOf(
@@ -466,14 +523,17 @@ object EssentialControlsData {
             summary = "Privileged access requests revalidated every 12 months or sooner. Privileged accounts (other than break-glass) cannot log on to non-privileged operating environments. Credential Guard enabled.",
             steps = listOf(
                 step(5, MaturityLevel.ML2, 0,
+                    ismControls = listOf("ISM-1686"),
                     title = "Enable Credential Guard",
                     description = "Stores derived domain credentials in a virtualisation-based secure container, defeating pass-the-hash and pass-the-ticket attacks.",
+                    osScope = OSScope.WORKSTATION,
                     technicalDetails = listOf(
                         "GPO: Computer Configuration → Administrative Templates → System → Device Guard → Turn On Virtualization Based Security = Enabled, Credential Guard Configuration = Enabled with UEFI lock",
                         "Registry: HKLM\\SYSTEM\\CurrentControlSet\\Control\\LSA → LsaCfgFlags = 1 (DWORD)"
                     )
                 ),
                 step(5, MaturityLevel.ML2, 1,
+                    ismControls = listOf("ISM-1861"),
                     title = "Protect LSASS",
                     description = "Run LSASS as a protected process so non-protected processes cannot read its memory.",
                     technicalDetails = listOf(
@@ -482,6 +542,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(5, MaturityLevel.ML2, 2,
+                    ismControls = listOf("ISM-1508"),
                     title = "Apply Just Enough Administration (JEA)",
                     description = "JEA exposes only specified PowerShell cmdlets/parameters to delegated administrators via constrained session configurations.",
                     technicalDetails = listOf(
@@ -505,6 +566,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(5, MaturityLevel.ML3, 1,
+                    ismControls = listOf("ISM-1898", "ISM-1380", "ISM-1689"),
                     title = "Privileged Access Workstation (PAW)",
                     description = "Dedicated hardened workstation, used only for admin tasks, with no email, web or productivity apps. Use Microsoft's PAW reference build (GPO templates).",
                     technicalDetails = listOf(
@@ -514,6 +576,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(5, MaturityLevel.ML3, 2,
+                    ismControls = listOf("ISM-1509", "ISM-1650"),
                     title = "Audit privileged account use",
                     description = "Enable advanced auditing for account logon, account management and sensitive privilege use, and forward to a collector.",
                     technicalDetails = listOf(
@@ -537,6 +600,7 @@ object EssentialControlsData {
             summary = "OS patches applied within one month (within two weeks for internet-facing). Only vendor-supported OS versions in use.",
             steps = listOf(
                 step(6, MaturityLevel.ML1, 0,
+                    ismControls = listOf("ISM-1877", "ISM-1694", "ISM-1695"),
                     title = "Configure Windows Update for Business",
                     description = "WUfB delivers quality and feature updates straight from Microsoft, configurable via Group Policy.",
                     technicalDetails = listOf(
@@ -545,6 +609,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(6, MaturityLevel.ML1, 1,
+                    ismControls = listOf("ISM-1877", "ISM-1694", "ISM-1695"),
                     title = "Enforce a quality-update deadline",
                     description = "A deadline forces a restart after a defined period, so the patch actually takes effect.",
                     technicalDetails = listOf(
@@ -553,6 +618,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(6, MaturityLevel.ML1, 2,
+                    ismControls = listOf("ISM-1807", "ISM-1501"),
                     title = "Inventory OS versions",
                     description = "Identify and replace any out-of-support OS instances.",
                     technicalDetails = listOf(
@@ -567,6 +633,7 @@ object EssentialControlsData {
             summary = "OS patches applied within two weeks (48 hours for internet-facing when an exploit exists). Driver and firmware updates applied within one month.",
             steps = listOf(
                 step(6, MaturityLevel.ML2, 0,
+                    ismControls = listOf("ISM-1877", "ISM-1694", "ISM-1695"),
                     title = "Tighten deferrals and deadlines",
                     description = "Reduce deferral to zero and deadline to two weeks for workstations; tighter still for internet-facing servers.",
                     technicalDetails = listOf(
@@ -575,6 +642,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(6, MaturityLevel.ML2, 1,
+                    ismControls = listOf("ISM-1697"),
                     title = "Include driver updates from Windows Update",
                     description = "Windows Update can deliver vendor-signed driver and firmware (DCH) updates.",
                     technicalDetails = listOf(
@@ -589,6 +657,7 @@ object EssentialControlsData {
             summary = "Internet-facing OS patches applied within 48 hours when an exploit exists. Workstation and non-internet-facing OS within two weeks. Use of latest or N-1 OS release.",
             steps = listOf(
                 step(6, MaturityLevel.ML3, 0,
+                    ismControls = listOf("ISM-1877", "ISM-1696"),
                     title = "Expedite critical patches",
                     description = "For exploited vulnerabilities, push immediately rather than waiting for the standard ring schedule.",
                     technicalDetails = listOf(
@@ -597,6 +666,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(6, MaturityLevel.ML3, 1,
+                    ismControls = listOf("ISM-1407", "ISM-1501"),
                     title = "Stay on N or N-1 Windows feature releases",
                     description = "Older feature releases reach end-of-servicing and stop receiving security updates. Track and upgrade.",
                     technicalDetails = listOf(
@@ -621,6 +691,7 @@ object EssentialControlsData {
             summary = "MFA used by organisation's users (and any third-party users) authenticating to the organisation's internet-facing services. MFA used to authenticate to third-party online services that store sensitive customer data.",
             steps = listOf(
                 step(7, MaturityLevel.ML1, 0,
+                    ismControls = listOf("ISM-0974", "ISM-1401"),
                     title = "Enable Windows Hello for Business",
                     description = "WHfB binds an asymmetric key pair to the TPM, unlocked by PIN or biometric. The factors are 'something you have' (the device/TPM) and 'something you know/are' (PIN/biometric).",
                     technicalDetails = listOf(
@@ -630,6 +701,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(7, MaturityLevel.ML1, 1,
+                    ismControls = listOf("ISM-1401"),
                     title = "Enforce PIN complexity",
                     description = "Set minimum PIN length and complexity so the local factor is meaningful.",
                     technicalDetails = listOf(
@@ -638,6 +710,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(7, MaturityLevel.ML1, 2,
+                    ismControls = listOf("ISM-0974", "ISM-1682"),
                     title = "Enable smart-card support for legacy logon",
                     description = "For internet-facing services that don't speak modern auth, AD CS-issued smart cards provide a second factor.",
                     technicalDetails = listOf(
@@ -651,6 +724,7 @@ object EssentialControlsData {
             summary = "MFA used by privileged users (other than for accessing the same systems they administer with personal accounts). MFA verifier matches the authenticator (phishing-resistant) for privileged users.",
             steps = listOf(
                 step(7, MaturityLevel.ML2, 0,
+                    ismControls = listOf("ISM-1173", "ISM-1401", "ISM-1682"),
                     title = "Require MFA for all privileged accounts",
                     description = "Force WHfB or smart-card authentication for any account with admin rights; block password-only sign-in.",
                     technicalDetails = listOf(
@@ -659,6 +733,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(7, MaturityLevel.ML2, 1,
+                    ismControls = listOf("ISM-1173", "ISM-1682"),
                     title = "Set SmartcardLogonRequired on admin accounts",
                     description = "AD attribute that forces smart-card / WHfB cert-trust authentication and prevents NTLM password use.",
                     technicalDetails = listOf(
@@ -673,6 +748,7 @@ object EssentialControlsData {
             summary = "MFA is phishing-resistant for all users. MFA events centrally logged. Successful and unsuccessful MFA events reviewed.",
             steps = listOf(
                 step(7, MaturityLevel.ML3, 0,
+                    ismControls = listOf("ISM-1401", "ISM-1682"),
                     title = "Deploy WHfB with certificate trust",
                     description = "Certificate-trust deployment (vs key-trust) issues a smart-card-style cert from AD CS, which is phishing-resistant and works against on-prem AD.",
                     technicalDetails = listOf(
@@ -681,6 +757,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(7, MaturityLevel.ML3, 1,
+                    ismControls = listOf("ISM-1682"),
                     title = "Enable FIDO2 security key sign-in",
                     description = "FIDO2 security keys are phishing-resistant and work with WHfB / AD CS in hybrid scenarios.",
                     technicalDetails = listOf(
@@ -689,6 +766,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(7, MaturityLevel.ML3, 2,
+                    ismControls = listOf("ISM-1683"),
                     title = "Log and forward authentication events",
                     description = "Windows logs auth events to the Security log; forward them centrally via WEF.",
                     technicalDetails = listOf(
@@ -713,22 +791,27 @@ object EssentialControlsData {
             summary = "Backups of important data, software and configuration performed and retained per business continuity requirements. Restoration tested when initially implemented and then annually. Unprivileged accounts cannot access backups belonging to other accounts.",
             steps = listOf(
                 step(8, MaturityLevel.ML1, 0,
+                    ismControls = listOf("ISM-1511", "ISM-1811"),
                     title = "Install Windows Server Backup",
                     description = "Built-in image / file backup tool for Windows Server. Free, scriptable, supports VSS-aware applications.",
+                    osScope = OSScope.SERVER,
                     technicalDetails = listOf(
                         "PowerShell: Install-WindowsFeature Windows-Server-Backup -IncludeManagementTools",
                         "Ad-hoc backup: wbadmin start backup -backupTarget:E: -include:C: -allCritical -vssFull -quiet"
                     )
                 ),
                 step(8, MaturityLevel.ML1, 1,
+                    ismControls = listOf("ISM-1511", "ISM-1810", "ISM-1811"),
                     title = "Schedule daily backups",
                     description = "wbadmin can schedule recurring backups; schedule via Task Scheduler for more granular cadence.",
+                    osScope = OSScope.SERVER,
                     technicalDetails = listOf(
-                        "Command: wbadmin enable backup -addtarget:\\\\backup\\server1 -include:C: -allCritical -schedule:23:00 -user:CORP\\backupsvc -password:<pwd>",
+                        "Command: wbadmin enable backup -addtarget:\\\\backup\\server1 -include:C: -allCritical -schedule:23:00 -user:CORP\\backupsvc -password:<pwd> (Caution: entering passwords in plaintext via CLI logs them to history)",
                         "Task Scheduler: schtasks /create /tn 'Daily Backup' /tr 'wbadmin start backup -backupTarget:E: -include:C: -allCritical -quiet' /sc daily /st 23:00 /ru SYSTEM"
                     )
                 ),
                 step(8, MaturityLevel.ML1, 2,
+                    ismControls = listOf("ISM-1812", "ISM-1814"),
                     title = "Restrict access to backup destinations",
                     description = "NTFS / share permissions on the backup target must exclude ordinary users.",
                     technicalDetails = listOf(
@@ -736,6 +819,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(8, MaturityLevel.ML1, 3,
+                    ismControls = listOf("ISM-1511", "ISM-1810"),
                     title = "Enable Volume Shadow Copies for file servers",
                     description = "Provides point-in-time snapshots that users can self-restore via 'Previous Versions'.",
                     technicalDetails = listOf(
@@ -750,6 +834,7 @@ object EssentialControlsData {
             summary = "Restoration of backups tested in a disaster-recovery exercise quarterly. Unprivileged accounts cannot modify, delete or access their own backups.",
             steps = listOf(
                 step(8, MaturityLevel.ML2, 0,
+                    ismControls = listOf("ISM-1705", "ISM-1707"),
                     title = "Separate backup credentials",
                     description = "Backups must run under a dedicated service account that is not a domain administrator and is not used interactively.",
                     technicalDetails = listOf(
@@ -759,6 +844,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(8, MaturityLevel.ML2, 1,
+                    ismControls = listOf("ISM-1813", "ISM-1814"),
                     title = "Restrict user access to their own backups",
                     description = "Users should not be able to read, restore, modify or delete their own backups — only authorised restorers should.",
                     technicalDetails = listOf(
@@ -773,6 +859,7 @@ object EssentialControlsData {
             summary = "Restoration of backups tested in a disaster-recovery exercise at least annually. Privileged accounts (excluding backup administrators) cannot modify or delete backups. Backups protected from destruction.",
             steps = listOf(
                 step(8, MaturityLevel.ML3, 0,
+                    ismControls = listOf("ISM-1811"),
                     title = "Use ReFS with integrity streams for backup volumes",
                     description = "ReFS detects (and with mirror/parity, corrects) silent corruption of backup data.",
                     technicalDetails = listOf(
@@ -781,6 +868,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(8, MaturityLevel.ML3, 1,
+                    ismControls = listOf("ISM-1705", "ISM-1706", "ISM-1707", "ISM-1708"),
                     title = "Lock down with role separation",
                     description = "Only the backup administrator role (separate from general Domain / Server Admins) holds modify / delete rights on the backup data.",
                     technicalDetails = listOf(
@@ -789,6 +877,7 @@ object EssentialControlsData {
                     )
                 ),
                 step(8, MaturityLevel.ML3, 2,
+                    ismControls = listOf("ISM-1811"),
                     title = "Offline / air-gapped copy",
                     description = "Retain at least one copy on offline media (e.g. rotated tape or removable disk) disconnected from the network outside backup windows.",
                     technicalDetails = listOf(

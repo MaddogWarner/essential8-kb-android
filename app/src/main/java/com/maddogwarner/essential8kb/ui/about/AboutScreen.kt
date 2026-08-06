@@ -15,29 +15,54 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PrivacyTip
 import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.maddogwarner.essential8kb.data.AppInformation
 import com.maddogwarner.essential8kb.data.ReferenceLink
+import com.maddogwarner.essential8kb.data.OSScope
 import com.maddogwarner.essential8kb.ui.components.SectionHeader
 
 @Composable
 fun AboutScreen(
+    osScope: OSScope,
+    onOSScopeChanged: (OSScope) -> Unit,
+    referenceOnlyMode: Boolean,
+    onReferenceOnlyModeChanged: (Boolean) -> Unit,
+    deepAuditEnabled: Boolean,
+    onDeepAuditEnabledChanged: (Boolean) -> Unit,
+    multiProfileEnabled: Boolean,
+    onMultiProfileEnabledChanged: (Boolean) -> Unit,
+    activeProfileName: String,
+    onProfilesSelected: () -> Unit,
+    onResetAppData: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    var showingResetDialog by remember { mutableStateOf(false) }
+
     val openLink: (ReferenceLink) -> Unit = { reference ->
         try {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(reference.url))
@@ -95,6 +120,134 @@ fun AboutScreen(
         }
 
         item {
+            SectionHeader("Assessment Features")
+            CardBlock {
+                SettingSwitchRow(
+                    title = "Multiple Profiles",
+                    checked = multiProfileEnabled,
+                    onCheckedChange = onMultiProfileEnabledChanged,
+                )
+                SettingSwitchRow(
+                    title = "Deep Audit Mode",
+                    checked = deepAuditEnabled,
+                    onCheckedChange = onDeepAuditEnabledChanged,
+                )
+            }
+            Text(
+                text = "Multiple Profiles lets you track separate environments or organisations, each with its own progress, settings and audit history. Deep Audit Mode records a timestamped, optionally-annotated history for every status change in the active profile.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        if (multiProfileEnabled) {
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onProfilesSelected),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Profiles", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            activeProfileName,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Text(
+                    text = "The active profile determines what every screen shows. Switching profiles changes the dashboard, steps and audit history.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            }
+        }
+
+        item {
+            SectionHeader("Preferences")
+        }
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = "OS Scope",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                            OSScope.entries.forEachIndexed { index, scope ->
+                                SegmentedButton(
+                                    selected = osScope == scope,
+                                    onClick = { onOSScopeChanged(scope) },
+                                    shape = SegmentedButtonDefaults.itemShape(index, OSScope.entries.size),
+                                    label = {
+                                        Text(
+                                            when (scope) {
+                                                OSScope.WORKSTATION -> "Workstation"
+                                                OSScope.SERVER -> "Server"
+                                                OSScope.BOTH -> "Both"
+                                            },
+                                        )
+                                    },
+                                )
+                            }
+                        }
+                    }
+                    SettingSwitchRow(
+                        title = "Reference Only Mode",
+                        checked = referenceOnlyMode,
+                        onCheckedChange = onReferenceOnlyModeChanged,
+                    )
+                }
+            }
+            Text(
+                text = "OS scope hides implementation steps that don't apply to the selected environment and recalculates compliance over the remaining steps. Reference Only Mode hides the compliance dashboard on the home screen.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+
+        item {
+            SectionHeader("Tools & Feedback")
+        }
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showingResetDialog = true }
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Delete,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Text(
+                        text = "Reset App Data",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+
+        item {
             SectionHeader("References")
         }
         items(AppInformation.referenceLinks, key = { it.url }) { reference ->
@@ -107,6 +260,45 @@ fun AboutScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+
+    if (showingResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showingResetDialog = false },
+            title = { Text("Reset App Data") },
+            text = { Text("This clears all profiles, progress, audit history and app settings. This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showingResetDialog = false
+                        onResetAppData()
+                    }
+                ) {
+                    Text("Reset", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showingResetDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun SettingSwitchRow(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
