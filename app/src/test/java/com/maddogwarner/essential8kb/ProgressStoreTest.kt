@@ -246,6 +246,19 @@ class ProgressStoreTest {
     }
 
     @Test
+    fun emptyNotApplicableReasonStoresNullAuditNote() = runBlocking {
+        val scope = testScope()
+        val dataStore = dataStore(scope, "audit-empty-na-note.preferences_pb")
+        val store = ProgressStore(dataStore)
+        SettingsStore(dataStore).setDeepAuditEnabled(true)
+
+        store.setStatus(StepState.NOT_APPLICABLE, "", note = null, stepId = "1-1-0")
+
+        assertEquals(null, store.auditEntries("1-1-0").single().note)
+        scope.cancel()
+    }
+
+    @Test
     fun auditTrailSurvivesProfileSwitch() = runBlocking {
         val scope = testScope()
         val dataStore = dataStore(scope, "audit-profile-switch.preferences_pb")

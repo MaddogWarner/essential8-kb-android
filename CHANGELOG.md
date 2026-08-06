@@ -16,6 +16,8 @@ All notable changes to this project are documented in this file.
 - Added profile-based assessments with per-profile progress, target maturity, OS scope and Microsoft 365 settings.
 - Added profile creation, switching, renaming and guarded deletion, plus migration of existing assessment data into a Default profile.
 - Added device-level Multiple Profiles and Deep Audit Mode preferences in preparation for audit history support.
+- Added cross-platform JSON backup and restore using Android's system document picker, including active-profile export, full-device export, non-destructive profile import and confirmed full-device replacement.
+- Added schema-v1 backup migration, schema-v2 validation, a 5 MB safety limit and per-step audit-history caps for untrusted backup files.
 
 ### Fixed
 
@@ -26,3 +28,5 @@ All notable changes to this project are documented in this file.
 - Moved Essential Eight step ID aggregation into the data layer so UI code no longer imports a store-layer helper.
 - Updated Windows Audit Policy recommendation badges to use Material colour roles that adapt across light and dark themes.
 - Isolated Android instrumentation navigation tests from persisted app DataStore state to reduce test flakiness.
+- Centralised global DataStore preference keys and restored status changes to the shared active-profile mutation path.
+- Removed the empty document left behind by the system document picker when a backup export fails.

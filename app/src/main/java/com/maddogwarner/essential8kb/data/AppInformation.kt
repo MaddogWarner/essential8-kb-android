@@ -1,6 +1,8 @@
 package com.maddogwarner.essential8kb.data
 
 object AppInformation {
+    const val marketingVersion = "1.0"
+
     const val aboutTitle = "About Essential 8"
 
     const val aboutDescription = "Essential 8 Knowledge Base is designed to give administrators just the technical details they need for each Essential Eight control as a quick reference."

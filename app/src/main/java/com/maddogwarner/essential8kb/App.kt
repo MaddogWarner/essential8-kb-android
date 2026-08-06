@@ -236,7 +236,13 @@ fun AppRoot(
                             scope.launch { settingsStore.setMultiProfileEnabled(enabled) }
                         },
                         activeProfileName = activeProfile?.name ?: "Default",
+                        profileCount = profiles.size,
                         onProfilesSelected = { navigate(Screen.Profiles) },
+                        onExportBackup = { allProfiles ->
+                            if (allProfiles) progressStore.exportAllProfiles() else progressStore.exportActiveProfile()
+                        },
+                        onImportAsNewProfile = progressStore::importAsNewProfile,
+                        onImportFullDevice = progressStore::importFullDevice,
                         onResetAppData = {
                             scope.launch {
                                 progressStore.resetAll()

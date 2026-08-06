@@ -181,6 +181,10 @@ class AppNavigationTest {
         composeRule.onNodeWithText("Assessment Features").assertExists()
         composeRule.onNodeWithText("Multiple Profiles").assertExists()
         composeRule.onNodeWithText("Deep Audit Mode").assertExists()
+        scrollToText("Backup & Restore")
+        composeRule.onNodeWithText("Backup & Restore").assertExists()
+        composeRule.onNodeWithText("Export Backup").assertExists()
+        composeRule.onNodeWithText("Import Backup").assertExists()
         scrollToText("OS Scope")
         composeRule.onNodeWithText("OS Scope").assertExists()
         composeRule.onNodeWithText("Workstation").assertExists()
@@ -209,6 +213,23 @@ class AppNavigationTest {
         scrollToText("Profiles")
         composeRule.onNodeWithText("Profiles").performClick()
         composeRule.onNodeWithText("Create Profile").assertDoesNotExist()
+    }
+
+    @Test
+    fun multiProfileExportChooserHasExplicitCancelAction() {
+        runBlocking { ProgressStore(testDataStore).createProfile("Second") }
+        setIsolatedAppContent()
+        composeRule.onNodeWithText("Get Started").performClick()
+
+        scrollToText("About & Privacy")
+        composeRule.onNodeWithText("About & Privacy").performClick()
+        scrollToText("Export Backup")
+        composeRule.onNodeWithText("Export Backup").performClick()
+
+        composeRule.onNodeWithText("This profile only").assertExists()
+        composeRule.onNodeWithText("All profiles").assertExists()
+        composeRule.onNodeWithText("Cancel").assertExists().performClick()
+        composeRule.onNodeWithText("This profile only").assertDoesNotExist()
     }
 
     @Test

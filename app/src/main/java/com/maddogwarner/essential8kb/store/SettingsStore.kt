@@ -2,7 +2,6 @@ package com.maddogwarner.essential8kb.store
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import java.io.IOException
@@ -23,7 +22,7 @@ class SettingsStore(
                 }
             }
             .map { preferences ->
-                preferences[SHOW_SPLASH_ON_STARTUP_KEY] != false
+                preferences[GlobalSettingsKeys.showSplashOnStartup] != false
             }
 
     val referenceOnlyMode: Flow<Boolean> =
@@ -36,31 +35,31 @@ class SettingsStore(
                 }
             }
             .map { preferences ->
-                preferences[REFERENCE_ONLY_MODE_KEY] == true
+                preferences[GlobalSettingsKeys.referenceOnlyMode] == true
             }
 
-    val deepAuditEnabled: Flow<Boolean> = booleanSetting(DEEP_AUDIT_ENABLED_KEY)
+    val deepAuditEnabled: Flow<Boolean> = booleanSetting(GlobalSettingsKeys.deepAuditEnabled)
 
-    val multiProfileEnabled: Flow<Boolean> = booleanSetting(MULTI_PROFILE_ENABLED_KEY)
+    val multiProfileEnabled: Flow<Boolean> = booleanSetting(GlobalSettingsKeys.multiProfileEnabled)
 
     suspend fun setShowSplashOnStartup(show: Boolean) {
         dataStore.edit { preferences ->
-            preferences[SHOW_SPLASH_ON_STARTUP_KEY] = show
+            preferences[GlobalSettingsKeys.showSplashOnStartup] = show
         }
     }
 
     suspend fun setReferenceOnlyMode(referenceOnly: Boolean) {
         dataStore.edit { preferences ->
-            preferences[REFERENCE_ONLY_MODE_KEY] = referenceOnly
+            preferences[GlobalSettingsKeys.referenceOnlyMode] = referenceOnly
         }
     }
 
     suspend fun setDeepAuditEnabled(enabled: Boolean) {
-        dataStore.edit { preferences -> preferences[DEEP_AUDIT_ENABLED_KEY] = enabled }
+        dataStore.edit { preferences -> preferences[GlobalSettingsKeys.deepAuditEnabled] = enabled }
     }
 
     suspend fun setMultiProfileEnabled(enabled: Boolean) {
-        dataStore.edit { preferences -> preferences[MULTI_PROFILE_ENABLED_KEY] = enabled }
+        dataStore.edit { preferences -> preferences[GlobalSettingsKeys.multiProfileEnabled] = enabled }
     }
 
     private fun booleanSetting(key: Preferences.Key<Boolean>): Flow<Boolean> =
@@ -69,11 +68,4 @@ class SettingsStore(
                 if (exception is IOException) emit(emptyPreferences()) else throw exception
             }
             .map { preferences -> preferences[key] == true }
-
-    companion object {
-        private val SHOW_SPLASH_ON_STARTUP_KEY = booleanPreferencesKey("showSplashOnStartup")
-        private val REFERENCE_ONLY_MODE_KEY = booleanPreferencesKey("referenceOnlyMode")
-        private val DEEP_AUDIT_ENABLED_KEY = booleanPreferencesKey("deepAuditEnabled")
-        private val MULTI_PROFILE_ENABLED_KEY = booleanPreferencesKey("multiProfileEnabled")
-    }
 }

@@ -3,7 +3,10 @@ package com.maddogwarner.essential8kb.ui.about
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,6 +19,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.FileDownload
+import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PrivacyTip
@@ -35,6 +40,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,7 +50,15 @@ import androidx.compose.ui.unit.dp
 import com.maddogwarner.essential8kb.data.AppInformation
 import com.maddogwarner.essential8kb.data.ReferenceLink
 import com.maddogwarner.essential8kb.data.OSScope
+import com.maddogwarner.essential8kb.store.BackupException
+import com.maddogwarner.essential8kb.store.BackupFile
 import com.maddogwarner.essential8kb.ui.components.SectionHeader
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun AboutScreen(
@@ -56,12 +71,84 @@ fun AboutScreen(
     multiProfileEnabled: Boolean,
     onMultiProfileEnabledChanged: (Boolean) -> Unit,
     activeProfileName: String,
+    profileCount: Int,
     onProfilesSelected: () -> Unit,
+    onExportBackup: suspend (allProfiles: Boolean) -> BackupFile,
+    onImportAsNewProfile: suspend (BackupFile) -> Unit,
+    onImportFullDevice: suspend (BackupFile) -> Unit,
     onResetAppData: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var showingResetDialog by remember { mutableStateOf(false) }
+    var showingExportOptions by remember { mutableStateOf(false) }
+    var pendingExportAllProfiles by rememberSaveable { mutableStateOf<Boolean?>(null) }
+    var pendingImport by remember { mutableStateOf<BackupFile?>(null) }
+    var backupErrorMessage by remember { mutableStateOf<String?>(null) }
+
+    val createDocument = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri ->
+        val allProfiles = pendingExportAllProfiles
+        if (uri == null) {
+            pendingExportAllProfiles = null
+        } else if (allProfiles == null) {
+            backupErrorMessage = "The backup could not be prepared."
+        } else {
+            scope.launch {
+                try {
+                    val backup = onExportBackup(allProfiles)
+                    withContext(Dispatchers.IO) {
+                        val bytes = BackupFile.encode(backup)
+                        context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                            ?: error("Unable to open the selected document")
+                    }
+                } catch (error: Exception) {
+                    // The picker already created the document, so remove the empty or
+                    // partial file rather than leaving an unimportable backup behind.
+                    withContext(Dispatchers.IO) {
+                        runCatching { DocumentsContract.deleteDocument(context.contentResolver, uri) }
+                    }
+                    backupErrorMessage = if (error is BackupException) {
+                        error.message
+                    } else {
+                        "The backup could not be saved."
+                    }
+                } finally {
+                    pendingExportAllProfiles = null
+                }
+            }
+        }
+    }
+    val openDocument = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    val bytes = withContext(Dispatchers.IO) {
+                        context.contentResolver.openInputStream(uri)?.use(BackupFile::read)
+                            ?: error("Unable to open the selected backup")
+                    }
+                    pendingImport = BackupFile.decode(bytes)
+                } catch (error: Exception) {
+                    backupErrorMessage = if (error is BackupException) {
+                        error.message
+                    } else {
+                        "The selected backup could not be read."
+                    }
+                }
+            }
+        }
+    }
+
+    fun prepareExport(allProfiles: Boolean) {
+        pendingExportAllProfiles = allProfiles
+        val prefix = if (allProfiles) "AllProfiles" else sanitiseFileName(activeProfileName)
+        val date = Instant.now()
+            .atZone(ZoneId.systemDefault())
+            .format(DateTimeFormatter.ISO_LOCAL_DATE)
+        createDocument.launch("Essential8-$prefix-$date.json")
+    }
 
     val openLink: (ReferenceLink) -> Unit = { reference ->
         try {
@@ -221,6 +308,7 @@ fun AboutScreen(
         item {
             SectionHeader("Tools & Feedback")
         }
+
         item {
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -245,6 +333,32 @@ fun AboutScreen(
                     )
                 }
             }
+        }
+
+        item {
+            SectionHeader("Backup & Restore")
+        }
+        item {
+            BackupActionRow(
+                title = "Export Backup",
+                icon = Icons.Outlined.FileUpload,
+                onClick = {
+                    if (profileCount > 1) showingExportOptions = true else prepareExport(false)
+                },
+            )
+        }
+        item {
+            BackupActionRow(
+                title = "Import Backup",
+                icon = Icons.Outlined.FileDownload,
+                onClick = { openDocument.launch(arrayOf("application/json", "text/json")) },
+            )
+            Text(
+                text = "Backups are plain JSON containing your profiles — step statuses, N/A reasons, audit history and per-profile settings. Export this profile to share one assessment, or all profiles to move everything to another device. They never leave your device unless you share them.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 6.dp),
+            )
         }
 
         item {
@@ -284,7 +398,85 @@ fun AboutScreen(
             }
         )
     }
+
+    if (showingExportOptions) {
+        AlertDialog(
+            onDismissRequest = { showingExportOptions = false },
+            title = { Text("Export Backup") },
+            text = { Text("Choose what to include in the backup.") },
+            confirmButton = {
+                Row {
+                    TextButton(onClick = {
+                        showingExportOptions = false
+                        prepareExport(false)
+                    }) { Text("This profile only") }
+                    TextButton(onClick = {
+                        showingExportOptions = false
+                        prepareExport(true)
+                    }) { Text("All profiles") }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showingExportOptions = false }) { Text("Cancel") }
+            },
+        )
+    }
+
+    pendingImport?.let { backup ->
+        val isFullDevice = backup.globalSettings != null
+        AlertDialog(
+            onDismissRequest = { pendingImport = null },
+            title = { Text(if (isFullDevice) "Replace everything?" else "Import profile?") },
+            text = {
+                val count = backup.profiles.size
+                val date = Instant.ofEpochMilli(backup.exportedAt)
+                    .atZone(ZoneId.systemDefault())
+                    .format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                Text(
+                    if (isFullDevice) {
+                        "This replaces all profiles and app settings with the backup from $date ($count profile(s), app version ${backup.appVersion}). This cannot be undone."
+                    } else {
+                        "This adds $count profile(s) from the backup of $date (app version ${backup.appVersion}). Your existing profiles are unchanged."
+                    },
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingImport = null
+                    scope.launch {
+                        try {
+                            if (isFullDevice) onImportFullDevice(backup) else onImportAsNewProfile(backup)
+                        } catch (error: Exception) {
+                            backupErrorMessage = error.message ?: "The backup could not be imported."
+                        }
+                    }
+                }) {
+                    Text(
+                        if (isFullDevice) "Replace" else "Import",
+                        color = if (isFullDevice) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingImport = null }) { Text("Cancel") }
+            },
+        )
+    }
+
+    backupErrorMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = { backupErrorMessage = null },
+            title = { Text("Backup Error") },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = { backupErrorMessage = null }) { Text("OK") }
+            },
+        )
+    }
 }
+
+internal fun sanitiseFileName(name: String): String =
+    name.replace(Regex("[^\\p{L}\\p{N}_-]"), "-").trim('-').ifEmpty { "Profile" }
 
 @Composable
 private fun SettingSwitchRow(
@@ -299,6 +491,27 @@ private fun SettingSwitchRow(
     ) {
         Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
         Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+private fun BackupActionRow(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Text(title, style = MaterialTheme.typography.titleMedium)
+        }
     }
 }
 
