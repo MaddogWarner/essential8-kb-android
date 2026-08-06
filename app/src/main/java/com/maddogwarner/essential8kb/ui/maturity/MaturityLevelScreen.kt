@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.AlertDialog
@@ -48,6 +49,7 @@ import com.maddogwarner.essential8kb.data.Microsoft365LicenseMode
 import com.maddogwarner.essential8kb.data.OSScope
 import com.maddogwarner.essential8kb.data.matches
 import com.maddogwarner.essential8kb.store.ProgressStore
+import com.maddogwarner.essential8kb.store.AuditEntry
 import com.maddogwarner.essential8kb.store.StepState
 import com.maddogwarner.essential8kb.store.StepStatus
 import com.maddogwarner.essential8kb.ui.components.CopyableCommand
@@ -63,7 +65,10 @@ fun MaturityLevelScreen(
     progressStore: ProgressStore,
     selectedLicenseMode: Microsoft365LicenseMode,
     osScope: OSScope,
-    onStatusChanged: (String, StepState, String?) -> Unit,
+    deepAuditEnabled: Boolean,
+    auditTrail: Map<String, List<AuditEntry>>,
+    onStatusChanged: (String, StepState, String?, String?) -> Unit,
+    onAuditHistorySelected: (String, List<AuditEntry>) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MaturityLevelViewModel = viewModel(),
 ) {
@@ -77,6 +82,10 @@ fun MaturityLevelScreen(
     var activeStepIdForNA by remember { mutableStateOf<String?>(null) }
     var showingNAReasonDialog by remember { mutableStateOf(false) }
     var naReasonText by remember { mutableStateOf("") }
+    var pendingAuditStepId by remember { mutableStateOf<String?>(null) }
+    var pendingAuditState by remember { mutableStateOf<StepState?>(null) }
+    var auditNoteText by remember { mutableStateOf("") }
+    var showingAuditNoteDialog by remember { mutableStateOf(false) }
 
     val headerProgressText = if (naCount > 0) {
         "$completedCount of ${scopedSteps.size} steps complete ($naCount not applicable)"
@@ -102,6 +111,7 @@ fun MaturityLevelScreen(
 
         itemsIndexed(scopedSteps, key = { _, step -> step.id }) { index, step ->
             val status = stepStatuses[step.id] ?: StepStatus(StepState.NOT_IMPLEMENTED)
+            val auditEntries = progressStore.auditEntries(step.id, auditTrail)
             StepCard(
                 index = index,
                 step = step,
@@ -112,8 +122,20 @@ fun MaturityLevelScreen(
                         naReasonText = status.reason.orEmpty()
                         showingNAReasonDialog = true
                     } else {
-                        onStatusChanged(step.id, state, null)
+                        if (deepAuditEnabled) {
+                            pendingAuditStepId = step.id
+                            pendingAuditState = state
+                            auditNoteText = ""
+                            showingAuditNoteDialog = true
+                        } else {
+                            onStatusChanged(step.id, state, null, null)
+                        }
                     }
+                },
+                auditEntries = auditEntries,
+                showHistory = deepAuditEnabled,
+                onAuditHistorySelected = {
+                    onAuditHistorySelected(step.title, auditEntries)
                 },
             )
         }
@@ -168,7 +190,7 @@ fun MaturityLevelScreen(
                     val stepId = activeStepIdForNA
                     if (stepId != null) {
                         val reason = naReasonText.trim().ifEmpty { null }
-                        onStatusChanged(stepId, StepState.NOT_APPLICABLE, reason)
+                        onStatusChanged(stepId, StepState.NOT_APPLICABLE, reason, reason)
                     }
                 }) {
                     Text("Save")
@@ -181,6 +203,54 @@ fun MaturityLevelScreen(
             }
         )
     }
+
+    if (showingAuditNoteDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showingAuditNoteDialog = false
+                pendingAuditStepId = null
+                pendingAuditState = null
+                auditNoteText = ""
+            },
+            title = { Text("Add Audit Note") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Optionally record why this status changed.")
+                    OutlinedTextField(
+                        value = auditNoteText,
+                        onValueChange = { auditNoteText = it },
+                        placeholder = { Text("Add a note (optional)") },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val stepId = pendingAuditStepId
+                    val state = pendingAuditState
+                    if (stepId != null && state != null) {
+                        onStatusChanged(stepId, state, null, auditNoteText)
+                    }
+                    showingAuditNoteDialog = false
+                    pendingAuditStepId = null
+                    pendingAuditState = null
+                    auditNoteText = ""
+                }) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showingAuditNoteDialog = false
+                    pendingAuditStepId = null
+                    pendingAuditState = null
+                    auditNoteText = ""
+                }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
 }
 
 @Composable
@@ -189,6 +259,9 @@ private fun StepCard(
     step: ImplementationStep,
     status: StepStatus,
     onStatusChanged: (StepState) -> Unit,
+    auditEntries: List<AuditEntry>,
+    showHistory: Boolean,
+    onAuditHistorySelected: () -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -314,6 +387,13 @@ private fun StepCard(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                        }
+                    }
+
+                    if (showHistory && auditEntries.isNotEmpty()) {
+                        TextButton(onClick = onAuditHistorySelected) {
+                            Icon(Icons.Outlined.History, contentDescription = null)
+                            Text("History (${auditEntries.size})")
                         }
                     }
 

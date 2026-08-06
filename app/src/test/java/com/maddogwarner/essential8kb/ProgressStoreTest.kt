@@ -10,6 +10,7 @@ import com.maddogwarner.essential8kb.data.MaturityLevel
 import com.maddogwarner.essential8kb.data.Microsoft365LicenseMode
 import com.maddogwarner.essential8kb.data.OSScope
 import com.maddogwarner.essential8kb.store.ProgressStore
+import com.maddogwarner.essential8kb.store.AUDIT_ENTRIES_PER_STEP_CAP
 import com.maddogwarner.essential8kb.store.SettingsStore
 import com.maddogwarner.essential8kb.store.StepState
 import java.io.File
@@ -182,6 +183,101 @@ class ProgressStoreTest {
         assertFalse(settingsStore.deepAuditEnabled.first())
         assertFalse(settingsStore.multiProfileEnabled.first())
 
+        scope.cancel()
+    }
+
+    @Test
+    fun deepAuditDisabledDoesNotRecordEntry() = runBlocking {
+        val scope = testScope()
+        val store = ProgressStore(dataStore(scope, "audit-disabled.preferences_pb"))
+
+        store.setStatus(StepState.IMPLEMENTED, null, "Not recorded", "1-1-0")
+
+        assertTrue(store.auditEntries("1-1-0").isEmpty())
+        scope.cancel()
+    }
+
+    @Test
+    fun deepAuditDoesNotRecordUnchangedState() = runBlocking {
+        val scope = testScope()
+        val dataStore = dataStore(scope, "audit-unchanged.preferences_pb")
+        val store = ProgressStore(dataStore)
+        SettingsStore(dataStore).setDeepAuditEnabled(true)
+
+        store.setStatus(StepState.IMPLEMENTED, null, "First", "1-1-0")
+        store.setStatus(StepState.IMPLEMENTED, null, "Duplicate", "1-1-0")
+
+        val entries = store.auditEntries("1-1-0")
+        assertEquals(1, entries.size)
+        assertEquals("First", entries.single().note)
+        scope.cancel()
+    }
+
+    @Test
+    fun deepAuditCapTrimsOldestEntriesAndReturnsNewestFirst() = runBlocking {
+        val scope = testScope()
+        val dataStore = dataStore(scope, "audit-cap.preferences_pb")
+        val store = ProgressStore(dataStore)
+        SettingsStore(dataStore).setDeepAuditEnabled(true)
+
+        for (index in 0..AUDIT_ENTRIES_PER_STEP_CAP + 4) {
+            val state = if (index % 2 == 0) StepState.NOT_IMPLEMENTED else StepState.IMPLEMENTED
+            store.setStatus(state, null, index.toString(), "capped")
+        }
+
+        val entries = store.auditEntries("capped")
+        assertEquals(AUDIT_ENTRIES_PER_STEP_CAP, entries.size)
+        assertEquals("204", entries.first().note)
+        assertEquals("5", entries.last().note)
+        scope.cancel()
+    }
+
+    @Test
+    fun notApplicableReasonFallsThroughToAuditNote() = runBlocking {
+        val scope = testScope()
+        val dataStore = dataStore(scope, "audit-na-note.preferences_pb")
+        val store = ProgressStore(dataStore)
+        SettingsStore(dataStore).setDeepAuditEnabled(true)
+
+        store.setStatus(StepState.NOT_APPLICABLE, "  Approved exception  ", "   ", "1-1-0")
+
+        assertEquals("  Approved exception  ", store.auditEntries("1-1-0").single().note)
+        scope.cancel()
+    }
+
+    @Test
+    fun auditTrailSurvivesProfileSwitch() = runBlocking {
+        val scope = testScope()
+        val dataStore = dataStore(scope, "audit-profile-switch.preferences_pb")
+        val store = ProgressStore(dataStore)
+        SettingsStore(dataStore).setDeepAuditEnabled(true)
+        val defaultId = store.activeProfile.first().id
+
+        store.setStatus(StepState.IMPLEMENTED, null, "Default entry", "1-1-0")
+        val secondId = store.createProfile("Second")
+        store.switchProfile(secondId)
+        assertTrue(store.auditEntries("1-1-0").isEmpty())
+        store.setStatus(StepState.NOT_APPLICABLE, "Second", null, "1-1-0")
+
+        store.switchProfile(defaultId)
+        assertEquals("Default entry", store.auditEntries("1-1-0").single().note)
+        store.switchProfile(secondId)
+        assertEquals("Second", store.auditEntries("1-1-0").single().note)
+        scope.cancel()
+    }
+
+    @Test
+    fun toggleRecordsAuditEntryThroughSetStatus() = runBlocking {
+        val scope = testScope()
+        val dataStore = dataStore(scope, "audit-toggle.preferences_pb")
+        val store = ProgressStore(dataStore)
+        SettingsStore(dataStore).setDeepAuditEnabled(true)
+
+        store.toggle("1-1-0")
+
+        val entry = store.auditEntries("1-1-0").single()
+        assertEquals(StepState.NOT_IMPLEMENTED, entry.previousState)
+        assertEquals(StepState.IMPLEMENTED, entry.newState)
         scope.cancel()
     }
 

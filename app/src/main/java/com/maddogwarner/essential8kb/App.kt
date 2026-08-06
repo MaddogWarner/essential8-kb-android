@@ -32,9 +32,11 @@ import com.maddogwarner.essential8kb.data.Microsoft365LicenseMode
 import com.maddogwarner.essential8kb.data.OSScope
 import com.maddogwarner.essential8kb.store.ProgressStore
 import com.maddogwarner.essential8kb.store.SettingsStore
+import com.maddogwarner.essential8kb.store.AuditEntry
 import com.maddogwarner.essential8kb.store.essential8DataStore
 import com.maddogwarner.essential8kb.ui.about.AboutScreen
 import com.maddogwarner.essential8kb.ui.audit.AuditPolicyScreen
+import com.maddogwarner.essential8kb.ui.audit.StepAuditHistoryScreen
 import com.maddogwarner.essential8kb.ui.detail.ControlDetailScreen
 import com.maddogwarner.essential8kb.ui.home.HomeScreen
 import com.maddogwarner.essential8kb.ui.m365.Microsoft365SettingsScreen
@@ -58,6 +60,10 @@ sealed interface Screen {
     data object About : Screen
     data object GlobalSearch : Screen
     data object Profiles : Screen
+    data class StepAuditHistory(
+        val stepTitle: String,
+        val entries: List<AuditEntry>,
+    ) : Screen
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -189,8 +195,13 @@ fun AppRoot(
                         progressStore = progressStore,
                         selectedLicenseMode = selectedLicenseMode,
                         osScope = osScope,
-                        onStatusChanged = { stepId, state, reason ->
-                            scope.launch { progressStore.setStatus(state, reason, stepId) }
+                        deepAuditEnabled = deepAuditEnabled,
+                        auditTrail = activeProfile?.auditTrail.orEmpty(),
+                        onStatusChanged = { stepId, state, reason, note ->
+                            scope.launch { progressStore.setStatus(state, reason, note, stepId) }
+                        },
+                        onAuditHistorySelected = { stepTitle, entries ->
+                            navigate(Screen.StepAuditHistory(stepTitle, entries))
                         },
                         modifier = Modifier.padding(innerPadding),
                     )
@@ -269,6 +280,11 @@ fun AppRoot(
                         },
                         modifier = Modifier.padding(innerPadding),
                     )
+
+                    is Screen.StepAuditHistory -> StepAuditHistoryScreen(
+                        entries = screen.entries,
+                        modifier = Modifier.padding(innerPadding),
+                    )
                 }
             }
 
@@ -295,4 +311,5 @@ private fun Screen.title(): String =
         Screen.About -> "About Essential 8"
         Screen.GlobalSearch -> "Global Search"
         Screen.Profiles -> "Profiles"
+        is Screen.StepAuditHistory -> stepTitle
     }

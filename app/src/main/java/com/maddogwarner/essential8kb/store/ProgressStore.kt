@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
@@ -124,16 +125,54 @@ class ProgressStore(
     }
 
     suspend fun setStatus(state: StepState, reason: String?, stepId: String) {
-        mutateActiveProfile { profile ->
-            val statuses = profile.stepProgress.toMutableMap()
-            if (state == StepState.NOT_IMPLEMENTED) {
-                statuses.remove(stepId)
-            } else {
-                statuses[stepId] = StepStatus(state, reason)
+        setStatus(state, reason, note = null, stepId)
+    }
+
+    suspend fun setStatus(state: StepState, reason: String?, note: String?, stepId: String) {
+        dataStore.edit { preferences ->
+            val profileState = stateFromPreferences(preferences)
+            val updatedProfiles = profileState.profiles.map { profile ->
+                if (profile.id != profileState.activeProfile.id) return@map profile
+
+                val previousState = profile.stepProgress[stepId]?.state ?: StepState.NOT_IMPLEMENTED
+                val statuses = profile.stepProgress.toMutableMap()
+                if (state == StepState.NOT_IMPLEMENTED) {
+                    statuses.remove(stepId)
+                } else {
+                    statuses[stepId] = StepStatus(state, reason)
+                }
+
+                if (preferences[DEEP_AUDIT_ENABLED_KEY] != true || state == previousState) {
+                    return@map profile.copy(stepProgress = statuses)
+                }
+
+                val trimmedNote = note?.trim()?.ifEmpty { null }
+                val effectiveNote = if (state == StepState.NOT_APPLICABLE) {
+                    trimmedNote ?: reason
+                } else {
+                    trimmedNote
+                }
+                val auditTrail = profile.auditTrail.toMutableMap()
+                auditTrail[stepId] = (auditTrail[stepId].orEmpty() + AuditEntry(
+                    id = UUID.randomUUID().toString(),
+                    timestamp = System.currentTimeMillis(),
+                    previousState = previousState,
+                    newState = state,
+                    note = effectiveNote,
+                )).takeLast(AUDIT_ENTRIES_PER_STEP_CAP)
+                profile.copy(stepProgress = statuses, auditTrail = auditTrail)
             }
-            profile.copy(stepProgress = statuses)
+            persistState(preferences, profileState.copy(profiles = updatedProfiles))
         }
     }
+
+    suspend fun auditEntries(stepId: String): List<AuditEntry> =
+        activeProfile.first().auditTrail[stepId].orEmpty().asReversed()
+
+    fun auditEntries(
+        stepId: String,
+        auditTrail: Map<String, List<AuditEntry>>,
+    ): List<AuditEntry> = auditTrail[stepId].orEmpty().asReversed()
 
     suspend fun toggle(stepId: String) {
         val current = stepStatuses.first()[stepId]?.state ?: StepState.NOT_IMPLEMENTED
@@ -410,5 +449,6 @@ class ProgressStore(
         private val LEGACY_TARGET_MATURITY_LEVEL_KEY = intPreferencesKey("targetMaturityLevel")
         private val LEGACY_OS_SCOPE_KEY = stringPreferencesKey("osScopeFilter")
         private val LEGACY_LICENSE_MODE_KEY = stringPreferencesKey("microsoft365LicenseMode")
+        private val DEEP_AUDIT_ENABLED_KEY = booleanPreferencesKey("deepAuditEnabled")
     }
 }
