@@ -1,6 +1,7 @@
 package com.maddogwarner.essential8kb
 
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
@@ -15,6 +16,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.test.platform.app.InstrumentationRegistry
+import com.maddogwarner.essential8kb.data.Microsoft365LicenseMode
 import com.maddogwarner.essential8kb.store.ProgressStore
 import com.maddogwarner.essential8kb.store.SettingsStore
 import java.io.File
@@ -23,6 +25,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
@@ -107,6 +110,54 @@ class AppNavigationTest {
         // Since target is ML1, both the ML2 and ML3 rows show "Beyond target".
         scrollToText("Maturity Level 3")
         composeRule.onAllNodesWithText("Beyond target").assertCountEquals(2)
+    }
+
+    @Test
+    fun microsoft365SelectionUpdatesSettingsAndDrivesMaturityAdditions() {
+        runBlocking { SettingsStore(testDataStore).setShowSplashOnStartup(false) }
+        setIsolatedAppContent()
+
+        scrollToText("M365 Additional Controls")
+        composeRule.onNodeWithText("M365 Additional Controls").performClick()
+
+        composeRule.onNodeWithText("None").assertExists()
+        composeRule.onNodeWithText("E3").assertExists().performClick()
+        composeRule.onNodeWithText("P1").assertExists()
+        composeRule.onNodeWithText("P2").assertExists()
+        composeRule.onNodeWithText("Current mode: E3 + P1").assertExists()
+
+        composeRule.onNodeWithText("E5").performClick()
+        composeRule.onNodeWithText("Current mode: E5").assertExists()
+        composeRule.onNodeWithText("P1").assertDoesNotExist()
+        composeRule.onNodeWithText("P2").assertDoesNotExist()
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            runBlocking { ProgressStore(testDataStore).licenseMode.first() } == Microsoft365LicenseMode.E5
+        }
+
+        composeRule.onNodeWithContentDescription("Back").performClick()
+        scrollToText("Application Control")
+        composeRule.onNodeWithText("Application Control").performClick()
+        composeRule.onNodeWithText("Maturity Level 1").performClick()
+        scrollToText("M365 / MDE additions")
+        composeRule.onNodeWithText("M365 / MDE additions").assertExists()
+    }
+
+    @Test
+    fun aboutShowsPrivacyReferencesAndActionableAsdLink() {
+        runBlocking { SettingsStore(testDataStore).setShowSplashOnStartup(false) }
+        setIsolatedAppContent()
+
+        scrollToText("About & Privacy")
+        composeRule.onNodeWithText("About & Privacy").performClick()
+
+        scrollToText("Privacy Policy")
+        composeRule.onNodeWithText("Privacy Policy").assertExists()
+        scrollToText("References")
+        composeRule.onNodeWithText("References").assertExists()
+        scrollToText("ASD Essential Eight maturity model")
+        composeRule.onNodeWithText("ASD Essential Eight maturity model")
+            .assertExists()
+            .assertHasClickAction()
     }
 
     @Test
