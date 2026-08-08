@@ -19,6 +19,7 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.ManageSearch
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.maddogwarner.essential8kb.data.EssentialControl
+import com.maddogwarner.essential8kb.data.AppInformation
 import com.maddogwarner.essential8kb.data.MaturityLevel
 import com.maddogwarner.essential8kb.data.OSScope
 import com.maddogwarner.essential8kb.store.ProgressStore
@@ -59,6 +61,7 @@ fun HomeScreen(
     referenceOnlyMode: Boolean,
     onControlSelected: (EssentialControl) -> Unit,
     onAuditPolicySelected: () -> Unit,
+    onAttackCoverageSelected: () -> Unit,
     onMicrosoft365Selected: () -> Unit,
     onAboutSelected: () -> Unit,
     modifier: Modifier = Modifier,
@@ -189,6 +192,20 @@ fun HomeScreen(
                 icon = { Icon(Icons.Outlined.ManageSearch, contentDescription = null) },
                 onClick = onAuditPolicySelected,
             )
+        }
+
+        if (!referenceOnlyMode) {
+            item {
+                SectionHeader("Threat Coverage")
+            }
+            item {
+                UtilityRow(
+                    title = "MITRE ATT&CK® Coverage",
+                    subtitle = "Which adversary techniques your implemented steps act against. ${AppInformation.attackDisclaimerShort}",
+                    icon = { Icon(Icons.Outlined.Security, contentDescription = null) },
+                    onClick = onAttackCoverageSelected,
+                )
+            }
         }
 
         item {

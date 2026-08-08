@@ -362,6 +362,16 @@ fun AboutScreen(
         }
 
         item {
+            SectionHeader("MITRE ATT&CK®")
+            CardBlock {
+                Text(AppInformation.attackDisclaimer)
+                Text(AppInformation.attackCoverageCaveat)
+                Text(AppInformation.attackVersionNote)
+                Text(AppInformation.attackAttribution)
+            }
+        }
+
+        item {
             SectionHeader("References")
         }
         items(AppInformation.referenceLinks, key = { it.url }) { reference ->

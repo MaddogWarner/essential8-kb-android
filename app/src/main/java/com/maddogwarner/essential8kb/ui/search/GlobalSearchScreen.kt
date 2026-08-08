@@ -42,6 +42,8 @@ import com.maddogwarner.essential8kb.data.EssentialControlsData
 import com.maddogwarner.essential8kb.data.ImplementationStep
 import com.maddogwarner.essential8kb.data.MaturityLevel
 import com.maddogwarner.essential8kb.data.MaturityLevelContent
+import com.maddogwarner.essential8kb.data.attack.ATTACKCatalogue
+import com.maddogwarner.essential8kb.data.attack.ATTACKMappingData
 import com.maddogwarner.essential8kb.ui.components.SectionHeader
 
 data class SearchResult(
@@ -59,7 +61,14 @@ fun ImplementationStep.matchesSearchQuery(query: String): Boolean {
     return title.contains(trimmed, ignoreCase = true) ||
             description.contains(trimmed, ignoreCase = true) ||
             technicalDetails.any { it.contains(trimmed, ignoreCase = true) } ||
-            ismControls.any { it.contains(trimmed, ignoreCase = true) }
+            ismControls.any { it.contains(trimmed, ignoreCase = true) } ||
+            ATTACKMappingData.mappings(id).any { mapping ->
+                val technique = ATTACKCatalogue.technique(mapping.techniqueID) ?: return@any false
+                technique.id.contains(trimmed, ignoreCase = true) ||
+                        technique.parentID?.contains(trimmed, ignoreCase = true) == true ||
+                        technique.name.contains(trimmed, ignoreCase = true) ||
+                        mapping.note?.contains(trimmed, ignoreCase = true) == true
+            }
 }
 
 fun ImplementationStep.matchingDetails(query: String): List<String> {
@@ -67,7 +76,18 @@ fun ImplementationStep.matchingDetails(query: String): List<String> {
     if (trimmed.isEmpty()) return emptyList()
     val matchedTech = technicalDetails.filter { it.contains(trimmed, ignoreCase = true) }
     val matchedIsm = ismControls.filter { it.contains(trimmed, ignoreCase = true) }
-    return matchedTech + matchedIsm
+    val matchedTechniques = ATTACKMappingData.mappings(id).mapNotNull { mapping ->
+        val technique = ATTACKCatalogue.technique(mapping.techniqueID) ?: return@mapNotNull null
+        val matches = technique.id.contains(trimmed, ignoreCase = true) ||
+                technique.parentID?.contains(trimmed, ignoreCase = true) == true ||
+                technique.name.contains(trimmed, ignoreCase = true) ||
+                mapping.note?.contains(trimmed, ignoreCase = true) == true
+        if (!matches) null else {
+            val relationships = mapping.relationships.joinToString { it.displayName }
+            "${technique.id} — ${technique.name} ($relationships)"
+        }
+    }
+    return matchedTech + matchedIsm + matchedTechniques
 }
 
 @Composable
@@ -121,7 +141,7 @@ fun GlobalSearchScreen(
         OutlinedTextField(
             value = searchText,
             onValueChange = { searchText = it },
-            placeholder = { Text("Search GPOs, registries, commands, ISM IDs...") },
+            placeholder = { Text("Search GPOs, registries, commands, ISM or ATT&CK IDs…") },
             leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
@@ -131,13 +151,13 @@ fun GlobalSearchScreen(
             EmptySearchState(
                 icon = Icons.Outlined.Search,
                 title = "Search technical details",
-                description = "Search registry paths, GPO settings, commands, ISM control numbers, or controls across the entire knowledge base."
+                description = "Search registry paths, GPO settings, commands, ISM control numbers, ATT&CK techniques, or controls across the entire knowledge base."
             )
         } else if (searchResults.isEmpty()) {
             EmptySearchState(
                 icon = Icons.Outlined.SearchOff,
                 title = "No results found",
-                description = "Try searching for terms like 'HKLM', 'AppLocker', 'ISM-1490', 'Registry', 'sc config', or 'block'."
+                description = "Try searching for terms like 'HKLM', 'AppLocker', 'ISM-1490', 'T1059', 'sc config', or 'block'."
             )
         } else {
             LazyColumn(

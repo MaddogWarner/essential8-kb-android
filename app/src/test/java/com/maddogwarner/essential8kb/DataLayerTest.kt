@@ -139,6 +139,12 @@ class DataLayerTest {
         assertTrue(urls.any { it.contains("learn.microsoft.com") && it.contains("defender-endpoint") })
         assertTrue(urls.any { it.contains("learn.microsoft.com") && it.contains("conditional-access") })
         assertFalse(AppInformation.referenceLinks.any { it.hostDisplayName.isBlank() })
+        assertEquals(
+            "© 2026 The MITRE Corporation. This work is reproduced and distributed with the permission of The MITRE Corporation. MITRE ATT&CK® and ATT&CK® are registered trademarks of The MITRE Corporation.",
+            AppInformation.attackAttribution,
+        )
+        assertTrue(urls.any { it == "https://attack.mitre.org/" })
+        assertTrue(urls.any { it.contains("attack.mitre.org/resources/legal-and-branding/terms-of-use") })
     }
 
     @Test

@@ -1,5 +1,7 @@
 package com.maddogwarner.essential8kb.data
 
+import com.maddogwarner.essential8kb.data.attack.ATTACKCatalogue
+
 object AppInformation {
     const val marketingVersion = "1.0"
 
@@ -11,7 +13,17 @@ object AppInformation {
 
     const val aboutMeTitle = "About Me"
 
-    const val aboutMeDescription = "MadDogWarner is not affiliated with ASD or Microsoft in any way. This project is a passion project built to provide a clear, easy to understand security tool that helps technical teams uplift Essential Eight practices to the masses."
+    const val aboutMeDescription = "MadDogWarner is not affiliated with ASD, Microsoft or The MITRE Corporation in any way. This project is a passion project built to provide a clear, easy to understand security tool that helps technical teams uplift Essential Eight practices to the masses."
+
+    const val attackDisclaimerShort = "Derived mapping — not an ASD or MITRE product."
+
+    const val attackDisclaimer = "ASD does not publish an Essential Eight to MITRE ATT&CK mapping. These technique links are derived and curated by the author from the ASD Essential Eight to ISM mapping and MITRE ATT&CK technique descriptions, and are provided as an aid to understanding — not as an authoritative or certified mapping. Verify against your own threat model before relying on them."
+
+    const val attackAttribution = "© ${ATTACKCatalogue.attackCopyrightYear} The MITRE Corporation. This work is reproduced and distributed with the permission of The MITRE Corporation. MITRE ATT&CK® and ATT&CK® are registered trademarks of The MITRE Corporation."
+
+    const val attackCoverageCaveat = "MITRE does not claim ATT&CK enumerates every possible adversary behaviour, and using ATT&CK does not guarantee full defensive coverage. A technique shown as covered means the mapped implementation steps are complete — not that your environment is defended against it."
+
+    const val attackVersionNote = "Mapped against MITRE ATT&CK® Enterprise ${ATTACKCatalogue.attackVersion}, released ${ATTACKCatalogue.attackVersionReleased}."
 
     val authorLinks: List<ReferenceLink> = listOf(
         ReferenceLink(
@@ -57,6 +69,14 @@ object AppInformation {
         ReferenceLink(
             title = "Microsoft Entra MFA licensing",
             url = referenceUrl("https://learn.microsoft.com/en-us/entra/identity/authentication/concept-mfa-licensing"),
+        ),
+        ReferenceLink(
+            title = "MITRE ATT&CK Enterprise matrix",
+            url = referenceUrl("https://attack.mitre.org/"),
+        ),
+        ReferenceLink(
+            title = "MITRE ATT&CK terms of use",
+            url = referenceUrl("https://attack.mitre.org/resources/legal-and-branding/terms-of-use/"),
         ),
     )
 

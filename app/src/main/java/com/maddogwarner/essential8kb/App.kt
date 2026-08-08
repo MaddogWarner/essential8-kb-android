@@ -30,6 +30,7 @@ import com.maddogwarner.essential8kb.data.MaturityLevel
 import com.maddogwarner.essential8kb.data.MaturityLevelContent
 import com.maddogwarner.essential8kb.data.Microsoft365LicenseMode
 import com.maddogwarner.essential8kb.data.OSScope
+import com.maddogwarner.essential8kb.data.attack.ATTACKTechnique
 import com.maddogwarner.essential8kb.store.ProgressStore
 import com.maddogwarner.essential8kb.store.SettingsStore
 import com.maddogwarner.essential8kb.store.AuditEntry
@@ -37,6 +38,8 @@ import com.maddogwarner.essential8kb.store.essential8DataStore
 import com.maddogwarner.essential8kb.ui.about.AboutScreen
 import com.maddogwarner.essential8kb.ui.audit.AuditPolicyScreen
 import com.maddogwarner.essential8kb.ui.audit.StepAuditHistoryScreen
+import com.maddogwarner.essential8kb.ui.attack.ATTACKCoverageScreen
+import com.maddogwarner.essential8kb.ui.attack.ATTACKTechniqueDetailScreen
 import com.maddogwarner.essential8kb.ui.detail.ControlDetailScreen
 import com.maddogwarner.essential8kb.ui.home.HomeScreen
 import com.maddogwarner.essential8kb.ui.m365.Microsoft365SettingsScreen
@@ -60,6 +63,8 @@ sealed interface Screen {
     data object About : Screen
     data object GlobalSearch : Screen
     data object Profiles : Screen
+    data class AttackCoverage(val controlFilter: Int? = null) : Screen
+    data class AttackTechniqueDetail(val technique: ATTACKTechnique) : Screen
     data class StepAuditHistory(
         val stepTitle: String,
         val entries: List<AuditEntry>,
@@ -170,6 +175,7 @@ fun AppRoot(
                         referenceOnlyMode = referenceOnlyMode,
                         onControlSelected = { navigate(Screen.ControlDetail(it)) },
                         onAuditPolicySelected = { navigate(Screen.AuditPolicy) },
+                        onAttackCoverageSelected = { navigate(Screen.AttackCoverage()) },
                         onMicrosoft365Selected = { navigate(Screen.Microsoft365Settings) },
                         onAboutSelected = { navigate(Screen.About) },
                         modifier = Modifier.padding(innerPadding),
@@ -181,6 +187,8 @@ fun AppRoot(
                         progressStore = progressStore,
                         targetLevel = targetLevel,
                         osScope = osScope,
+                        referenceOnlyMode = referenceOnlyMode,
+                        onAttackCoverageSelected = { navigate(Screen.AttackCoverage(screen.control.id)) },
                         onMaturityLevelSelected = { level, content ->
                             navigate(Screen.MaturityLevelDetail(screen.control, level, content))
                         },
@@ -203,6 +211,7 @@ fun AppRoot(
                         onAuditHistorySelected = { stepTitle, entries ->
                             navigate(Screen.StepAuditHistory(stepTitle, entries))
                         },
+                        onTechniqueSelected = { navigate(Screen.AttackTechniqueDetail(it)) },
                         modifier = Modifier.padding(innerPadding),
                     )
 
@@ -291,6 +300,23 @@ fun AppRoot(
                         entries = screen.entries,
                         modifier = Modifier.padding(innerPadding),
                     )
+
+                    is Screen.AttackCoverage -> ATTACKCoverageScreen(
+                        targetLevel = targetLevel,
+                        osScope = osScope,
+                        stepStatuses = stepStatuses,
+                        controlFilter = screen.controlFilter,
+                        onTechniqueSelected = { navigate(Screen.AttackTechniqueDetail(it)) },
+                        modifier = Modifier.padding(innerPadding),
+                    )
+
+                    is Screen.AttackTechniqueDetail -> ATTACKTechniqueDetailScreen(
+                        technique = screen.technique,
+                        targetLevel = targetLevel,
+                        osScope = osScope,
+                        stepStatuses = stepStatuses,
+                        modifier = Modifier.padding(innerPadding),
+                    )
                 }
             }
 
@@ -318,4 +344,8 @@ private fun Screen.title(): String =
         Screen.GlobalSearch -> "Global Search"
         Screen.Profiles -> "Profiles"
         is Screen.StepAuditHistory -> stepTitle
+        is Screen.AttackCoverage -> controlFilter?.let { controlID ->
+            EssentialControlsData.all.firstOrNull { it.id == controlID }?.let { "${it.name} — ATT&CK" }
+        } ?: "ATT&CK Coverage"
+        is Screen.AttackTechniqueDetail -> "ATT&CK Technique"
     }

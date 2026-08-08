@@ -48,11 +48,14 @@ import com.maddogwarner.essential8kb.data.Microsoft365AdditionalProtection
 import com.maddogwarner.essential8kb.data.Microsoft365LicenseMode
 import com.maddogwarner.essential8kb.data.OSScope
 import com.maddogwarner.essential8kb.data.matches
+import com.maddogwarner.essential8kb.data.attack.ATTACKMappingData
+import com.maddogwarner.essential8kb.data.attack.ATTACKTechnique
 import com.maddogwarner.essential8kb.store.ProgressStore
 import com.maddogwarner.essential8kb.store.AuditEntry
 import com.maddogwarner.essential8kb.store.StepState
 import com.maddogwarner.essential8kb.store.StepStatus
 import com.maddogwarner.essential8kb.ui.components.CopyableCommand
+import com.maddogwarner.essential8kb.ui.components.ATTACKTechniqueCapsules
 import com.maddogwarner.essential8kb.ui.components.ISMControlsCapsules
 import com.maddogwarner.essential8kb.ui.components.SectionHeader
 
@@ -69,6 +72,7 @@ fun MaturityLevelScreen(
     auditTrail: Map<String, List<AuditEntry>>,
     onStatusChanged: (String, StepState, String?, String?) -> Unit,
     onAuditHistorySelected: (String, List<AuditEntry>) -> Unit,
+    onTechniqueSelected: (ATTACKTechnique) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MaturityLevelViewModel = viewModel(),
 ) {
@@ -137,6 +141,7 @@ fun MaturityLevelScreen(
                 onAuditHistorySelected = {
                     onAuditHistorySelected(step.title, auditEntries)
                 },
+                onTechniqueSelected = onTechniqueSelected,
             )
         }
 
@@ -262,6 +267,7 @@ private fun StepCard(
     auditEntries: List<AuditEntry>,
     showHistory: Boolean,
     onAuditHistorySelected: () -> Unit,
+    onTechniqueSelected: (ATTACKTechnique) -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -398,6 +404,10 @@ private fun StepCard(
                     }
 
                     ISMControlsCapsules(controls = step.ismControls)
+                    ATTACKTechniqueCapsules(
+                        mappings = ATTACKMappingData.mappings(step.id),
+                        onTechniqueSelected = onTechniqueSelected,
+                    )
 
                     Text(step.description)
                     step.technicalDetails.forEach { detail ->

@@ -33,6 +33,7 @@ import com.maddogwarner.essential8kb.data.MaturityLevel
 import com.maddogwarner.essential8kb.data.MaturityLevelContent
 import com.maddogwarner.essential8kb.data.OSScope
 import com.maddogwarner.essential8kb.data.matches
+import com.maddogwarner.essential8kb.data.attack.ATTACKCoverageCalculator
 import com.maddogwarner.essential8kb.store.ProgressStore
 import com.maddogwarner.essential8kb.store.StepStatus
 import com.maddogwarner.essential8kb.ui.components.SectionHeader
@@ -45,6 +46,8 @@ fun ControlDetailScreen(
     progressStore: ProgressStore,
     targetLevel: MaturityLevel,
     osScope: OSScope,
+    referenceOnlyMode: Boolean,
+    onAttackCoverageSelected: () -> Unit,
     onMaturityLevelSelected: (MaturityLevel, MaturityLevelContent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -52,6 +55,7 @@ fun ControlDetailScreen(
     val completedCount = progressStore.completedCount(allSteps, stepStatuses)
     val naCount = progressStore.notApplicableCount(allSteps, stepStatuses)
     val compliancePercentage = progressStore.compliancePercentage(allSteps, stepStatuses)
+    val techniqueCount = ATTACKCoverageCalculator.techniquesForControl(control.id, targetLevel, osScope).size
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -138,6 +142,22 @@ fun ControlDetailScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp, start = 8.dp, end = 8.dp)
             )
+        }
+
+        if (!referenceOnlyMode) {
+            item {
+                SectionHeader("Threat Coverage")
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    modifier = Modifier.fillMaxWidth().clickable(onClick = onAttackCoverageSelected),
+                ) {
+                    Text(
+                        text = "$techniqueCount ATT&CK techniques mapped",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(16.dp),
+                    )
+                }
+            }
         }
 
         item {

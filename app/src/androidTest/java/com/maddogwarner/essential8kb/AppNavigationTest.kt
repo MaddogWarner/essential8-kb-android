@@ -171,7 +171,7 @@ class AppNavigationTest {
         composeRule.onNodeWithContentDescription("Search").performClick()
 
         // Search textfield exists, type "ISM-1490"
-        composeRule.onNodeWithText("Search GPOs, registries, commands, ISM IDs...").performTextInput("ISM-1490")
+        composeRule.onNodeWithText("Search GPOs, registries, commands, ISM or ATT&CK IDs…").performTextInput("ISM-1490")
 
         // Result matching "Extend AppLocker enforcement to servers" and "Deploy Windows Defender Application Control (WDAC)" should show
         composeRule.onNodeWithText("Extend AppLocker enforcement to servers").assertExists()
@@ -182,6 +182,50 @@ class AppNavigationTest {
 
         // Verifies it navigated to detail view: Mitigation 1 - ML2
         composeRule.onNodeWithText("Application Control — ML2").assertExists()
+    }
+
+    @Test
+    fun searchScreenFindsStepsByAttackTechniqueId() {
+        runBlocking { SettingsStore(testDataStore).setShowSplashOnStartup(false) }
+        setIsolatedAppContent()
+
+        composeRule.onNodeWithContentDescription("Search").performClick()
+        composeRule.onNodeWithText("Search GPOs, registries, commands, ISM or ATT&CK IDs…")
+            .performTextInput("T1059")
+
+        composeRule.onNodeWithText("Enable the Application Identity service").assertExists()
+        composeRule.onNodeWithText(
+            "T1059 — Command and Scripting Interpreter (Support)",
+        ).assertExists()
+    }
+
+    @Test
+    fun attackCoverageOpensTechniqueDetail() {
+        runBlocking { SettingsStore(testDataStore).setShowSplashOnStartup(false) }
+        setIsolatedAppContent()
+
+        scrollToText("MITRE ATT&CK® Coverage")
+        composeRule.onNodeWithText("MITRE ATT&CK® Coverage").performClick()
+        composeRule.onNodeWithText("Summary").assertExists()
+        scrollToText("T1059")
+        composeRule.onNodeWithText("T1059").performClick()
+
+        composeRule.onNodeWithText("ATT&CK Technique").assertExists()
+        composeRule.onNodeWithText("Command and Scripting Interpreter").assertExists()
+        scrollToText("View on attack.mitre.org")
+        composeRule.onNodeWithText("View on attack.mitre.org").assertHasClickAction()
+    }
+
+    @Test
+    fun referenceOnlyModeHidesAttackCoverageRow() {
+        runBlocking {
+            SettingsStore(testDataStore).setShowSplashOnStartup(false)
+            SettingsStore(testDataStore).setReferenceOnlyMode(true)
+        }
+        setIsolatedAppContent()
+
+        scrollToText("Settings")
+        composeRule.onNodeWithText("MITRE ATT&CK® Coverage").assertDoesNotExist()
     }
 
     @Test
