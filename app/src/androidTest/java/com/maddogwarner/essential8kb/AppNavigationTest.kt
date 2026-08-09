@@ -121,22 +121,32 @@ class AppNavigationTest {
         composeRule.onNodeWithText("M365 Additional Controls").performClick()
 
         composeRule.onNodeWithText("None").assertExists()
+        // The selection round-trips through DataStore, so the recomposition lands
+        // after the click returns. Wait for it rather than asserting immediately.
         composeRule.onNodeWithText("E3").assertExists().performClick()
-        composeRule.onNodeWithText("P1").assertExists()
+        awaitText("P1")
         composeRule.onNodeWithText("P2").assertExists()
+        // "Current mode" sits in Active Additions at the end of the list, which the
+        // expanded P1/P2 options push off screen.
+        scrollToText("Current mode: E3 + P1")
         composeRule.onNodeWithText("Current mode: E3 + P1").assertExists()
 
+        scrollToText("E5")
         composeRule.onNodeWithText("E5").performClick()
-        composeRule.onNodeWithText("Current mode: E5").assertExists()
-        composeRule.onNodeWithText("P1").assertDoesNotExist()
+        awaitTextGone("P1")
         composeRule.onNodeWithText("P2").assertDoesNotExist()
+        scrollToText("Current mode: E5")
+        composeRule.onNodeWithText("Current mode: E5").assertExists()
+
+        val progressStore = ProgressStore(testDataStore)
         composeRule.waitUntil(timeoutMillis = 5_000) {
-            runBlocking { ProgressStore(testDataStore).licenseMode.first() } == Microsoft365LicenseMode.E5
+            runBlocking { progressStore.licenseMode.first() } == Microsoft365LicenseMode.E5
         }
 
         composeRule.onNodeWithContentDescription("Back").performClick()
         scrollToText("Application Control")
         composeRule.onNodeWithText("Application Control").performClick()
+        scrollToText("Maturity Level 1")
         composeRule.onNodeWithText("Maturity Level 1").performClick()
         scrollToText("M365 / MDE additions")
         composeRule.onNodeWithText("M365 / MDE additions").assertExists()
@@ -347,5 +357,18 @@ class AppNavigationTest {
 
     private fun scrollToText(text: String) {
         composeRule.onNode(hasScrollAction()).performScrollToNode(hasText(text))
+    }
+
+    /** Waits for state that arrives via a DataStore round trip rather than recomposition alone. */
+    private fun awaitText(text: String) {
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
+    private fun awaitTextGone(text: String) {
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithText(text).fetchSemanticsNodes().isEmpty()
+        }
     }
 }
