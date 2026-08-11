@@ -38,7 +38,7 @@ object AppInformation {
 
     const val privacyTitle = "Privacy Policy"
 
-    const val privacyPolicy = "Essential 8 Knowledge Base has no accounts, no analytics, and makes no network requests of its own — nothing you enter is ever sent to the developer or any third party. Your assessment progress, notes and audit history are stored only on your device. That data leaves your device only if you export a backup yourself, or through your device's own system backup. External reference links open in your browser. The app does not request access to the microphone, camera, location services, contacts, photos, or other device sensors."
+    const val privacyPolicy = "Essential 8 Knowledge Base has no accounts, no analytics, and makes no network requests of its own — nothing you enter is ever sent to the developer or any third party. Your assessment progress, notes and audit history are stored only on your device. That data leaves your device only if you export a backup yourself — the app is excluded from Android Auto Backup and device-to-device transfer, so it is never copied to the cloud or to another phone. External reference links open in your browser. The app does not request access to the microphone, camera, location services, contacts, photos, or other device sensors."
 
     val privacyPolicyLink = ReferenceLink(
         title = "App privacy policy",

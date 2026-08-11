@@ -15,9 +15,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ManageSearch
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.ManageSearch
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material3.Card
@@ -189,7 +189,7 @@ fun HomeScreen(
             UtilityRow(
                 title = "Windows Audit Policy",
                 subtitle = "ASD recommended minimum Windows Security Audit Policy settings for detection and response.",
-                icon = { Icon(Icons.Outlined.ManageSearch, contentDescription = null) },
+                icon = { Icon(Icons.AutoMirrored.Outlined.ManageSearch, contentDescription = null) },
                 onClick = onAuditPolicySelected,
             )
         }

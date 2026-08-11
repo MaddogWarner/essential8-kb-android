@@ -3,6 +3,26 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
+val uploadStoreFile = providers.gradleProperty("E8KB_UPLOAD_STORE_FILE")
+    .orElse(providers.environmentVariable("E8KB_UPLOAD_STORE_FILE"))
+val uploadStorePassword = providers.gradleProperty("E8KB_UPLOAD_STORE_PASSWORD")
+    .orElse(providers.environmentVariable("E8KB_UPLOAD_STORE_PASSWORD"))
+val uploadKeyAlias = providers.gradleProperty("E8KB_UPLOAD_KEY_ALIAS")
+    .orElse(providers.environmentVariable("E8KB_UPLOAD_KEY_ALIAS"))
+val uploadKeyPassword = providers.gradleProperty("E8KB_UPLOAD_KEY_PASSWORD")
+    .orElse(providers.environmentVariable("E8KB_UPLOAD_KEY_PASSWORD"))
+val uploadSigningProperties = listOf(
+    uploadStoreFile,
+    uploadStorePassword,
+    uploadKeyAlias,
+    uploadKeyPassword,
+)
+val uploadSigningConfigured = uploadSigningProperties.all { it.isPresent }
+
+check(uploadSigningProperties.none { it.isPresent } || uploadSigningConfigured) {
+    "Upload signing is only partially configured. Provide all E8KB_UPLOAD_* properties or none."
+}
+
 android {
     namespace = "com.maddogwarner.essential8kb"
     compileSdk = 36
@@ -19,6 +39,29 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    signingConfigs {
+        if (uploadSigningConfigured) {
+            create("upload") {
+                storeFile = file(uploadStoreFile.get())
+                storePassword = uploadStorePassword.get()
+                keyAlias = uploadKeyAlias.get()
+                keyPassword = uploadKeyPassword.get()
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+            signingConfig = signingConfigs.findByName("upload")
+        }
     }
 
     compileOptions {

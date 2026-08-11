@@ -34,6 +34,19 @@ Build and test:
 ./gradlew lint
 ```
 
+Release bundles are minified and resource-shrunk. Upload signing is read from either Gradle
+properties (preferably `~/.gradle/gradle.properties`) or environment variables; never commit
+these values:
+
+```properties
+E8KB_UPLOAD_STORE_FILE=/absolute/path/to/e8kb-upload.jks
+E8KB_UPLOAD_STORE_PASSWORD=<secure-store-password>
+E8KB_UPLOAD_KEY_ALIAS=<upload-key-alias>
+E8KB_UPLOAD_KEY_PASSWORD=<secure-key-password>
+```
+
+With all four values configured, build the signed bundle with `./gradlew bundleRelease`.
+
 ## Verification
 
 Before release, validate:
@@ -45,6 +58,8 @@ Before release, validate:
 - Microsoft 365 mode persists and controls maturity-level additions.
 - About and reference links open in the external browser.
 - No `INTERNET` permission is present.
+- Android Auto Backup and device-to-device transfer exclude the assessment DataStore; use the
+  app's explicit JSON export for data portability.
 
 ## Disclaimer
 

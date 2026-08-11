@@ -127,7 +127,9 @@ class DataLayerTest {
 
     @Test
     fun aboutAndReferencesMatchAppScope() {
-        val expectedPrivacyPolicy = "Essential 8 Knowledge Base has no accounts, no analytics, and makes no network requests of its own — nothing you enter is ever sent to the developer or any third party. Your assessment progress, notes and audit history are stored only on your device. That data leaves your device only if you export a backup yourself, or through your device's own system backup. External reference links open in your browser. The app does not request access to the microphone, camera, location services, contacts, photos, or other device sensors."
+        // Deliberately diverges from the iOS wording: Android excludes the DataStore from Auto
+        // Backup and device transfer, so "your device's own system backup" is not true here.
+        val expectedPrivacyPolicy = "Essential 8 Knowledge Base has no accounts, no analytics, and makes no network requests of its own — nothing you enter is ever sent to the developer or any third party. Your assessment progress, notes and audit history are stored only on your device. That data leaves your device only if you export a backup yourself — the app is excluded from Android Auto Backup and device-to-device transfer, so it is never copied to the cloud or to another phone. External reference links open in your browser. The app does not request access to the microphone, camera, location services, contacts, photos, or other device sensors."
 
         assertTrue(AppInformation.aboutDescription.contains("administrators"))
         assertTrue(AppInformation.aboutDescription.contains("quick reference"))

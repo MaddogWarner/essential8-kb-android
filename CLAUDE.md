@@ -18,7 +18,7 @@ Native Android port of the iOS app *Essential 8 Knowledge Base* — an offline A
 - **UI:** Material 3, Material You dynamic colour, Material icons — no iOS chrome mimicry
 - **Scope:** Feature parity (including Global Search, target maturity selection, compliance dashboard, splash walkthrough onboarding, and Reference Only Mode) + copy-to-clipboard on every command/GPO/registry/PowerShell snippet
 - **Licence:** MIT, `Copyright (c) 2026 MaddogWarner`
-- **Icon:** adaptive-icon placeholder (shield / "E8" motif); final art swapped later
+- **Icon:** adaptive launcher icon derived from the final cyber dog and padlock brand artwork
 
 ---
 
@@ -61,7 +61,7 @@ iOS generates IDs as `"\(controlID)-\(level.rawValue)-\(index)"` where `level.ra
 The spec defers the mapping to Codex / a table in `data/Models.kt`. The 8 SF Symbols to map are:
 - `checkmark.shield` → `Icons.Outlined.Security` (or `Shield`)
 - `arrow.down.app` → `Icons.Outlined.SystemUpdate` (or `Download`)
-- `doc.text.magnifyingglass` → `Icons.Outlined.ManageSearch`
+- `doc.text.magnifyingglass` → `Icons.AutoMirrored.Outlined.ManageSearch`
 - `lock.shield` → `Icons.Outlined.Lock` (or `AdminPanelSettings`)
 - `person.badge.key` → `Icons.Outlined.ManageAccounts` (or `Key`)
 - `gearshape.2` → `Icons.Outlined.Settings` (or `SettingsSuggest`)
@@ -71,7 +71,7 @@ The spec defers the mapping to Codex / a table in `data/Models.kt`. The 8 SF Sym
 Final Android mapping implemented in `data/Models.kt`:
 - `checkmark.shield` → `Icons.Outlined.Security`
 - `arrow.down.app` → `Icons.Outlined.SystemUpdate`
-- `doc.text.magnifyingglass` → `Icons.Outlined.ManageSearch`
+- `doc.text.magnifyingglass` → `Icons.AutoMirrored.Outlined.ManageSearch`
 - `lock.shield` → `Icons.Outlined.Lock`
 - `person.badge.key` → `Icons.Outlined.ManageAccounts`
 - `gearshape.2` → `Icons.Outlined.Settings`

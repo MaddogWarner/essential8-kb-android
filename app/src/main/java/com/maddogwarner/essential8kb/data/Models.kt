@@ -1,11 +1,11 @@
 package com.maddogwarner.essential8kb.data
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ManageSearch
 import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.ManageAccounts
-import androidx.compose.material.icons.outlined.ManageSearch
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SystemUpdate
@@ -21,7 +21,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 fun materialIconForSfSymbol(systemName: String): ImageVector = when (systemName) {
     "checkmark.shield" -> Icons.Outlined.Security
     "arrow.down.app" -> Icons.Outlined.SystemUpdate
-    "doc.text.magnifyingglass" -> Icons.Outlined.ManageSearch
+    "doc.text.magnifyingglass" -> Icons.AutoMirrored.Outlined.ManageSearch
     "lock.shield" -> Icons.Outlined.Lock
     "person.badge.key" -> Icons.Outlined.ManageAccounts
     "gearshape.2" -> Icons.Outlined.Settings

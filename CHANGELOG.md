@@ -18,6 +18,8 @@ All notable changes to this project are documented in this file.
 - Added device-level Multiple Profiles and Deep Audit Mode preferences in preparation for audit history support.
 - Added cross-platform JSON backup and restore using Android's system document picker, including active-profile export, full-device export, non-destructive profile import and confirmed full-device replacement.
 - Added schema-v1 backup migration, schema-v2 validation, a 5 MB safety limit and per-step audit-history caps for untrusted backup files.
+- Added R8-minified, resource-shrunk release builds with external upload-signing configuration.
+- Replaced the placeholder launcher icon with adaptive cyber dog and padlock artwork, including a themed monochrome layer.
 
 ### Fixed
 
@@ -30,3 +32,7 @@ All notable changes to this project are documented in this file.
 - Isolated Android instrumentation navigation tests from persisted app DataStore state to reduce test flakiness.
 - Centralised global DataStore preference keys and restored status changes to the shared active-profile mutation path.
 - Removed the empty document left behind by the system document picker when a backup export fails.
+- Disabled Android Auto Backup and excluded the assessment DataStore from cloud backup and device-to-device transfer.
+- Made the audit-policy search icon mirror correctly in right-to-left layouts.
+- Scaled the launcher artwork into the adaptive-icon safe zone so the ears and padlock are no longer clipped by launcher masks.
+- Corrected the in-app privacy policy, which still claimed assessment data could leave the device through system backup.
