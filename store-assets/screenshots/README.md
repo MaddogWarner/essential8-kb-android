@@ -22,6 +22,15 @@ battery and no notification icons.
 
 Try `native/` first; fall back to `play-9x16/` only if the Console complains.
 
+## No tablet screenshots (deliberate)
+
+The 7" and 10" slots are left empty for v1.0. The app has no large-screen
+support — no `WindowSizeClass` handling and no `sw600dp` resources, so every
+screen is a single `fillMaxWidth` column that simply stretches on a tablet.
+Screenshots of that would misrepresent the experience. Play treats the slots as
+optional; the cost is the "not designed for tablets" label and lower ranking in
+tablet search results. Revisit once an adaptive layout exists.
+
 ## Reproducing
 
 Progress shown is seeded, not hand-tapped: a schema-v2 backup with 32 steps
