@@ -21,6 +21,10 @@ All notable changes to this project are documented in this file.
 - Added R8-minified, resource-shrunk release builds with external upload-signing configuration.
 - Replaced the placeholder launcher icon with adaptive cyber dog and padlock artwork, including a themed monochrome layer.
 
+### Changed
+
+- Upgraded the toolchain to Kotlin 2.4.10, AGP 9.3.1, Gradle 9.7.0, Compose BOM 2026.08.00, Lifecycle 2.11.0 and compileSdk 37. `targetSdk` remains 36.
+
 ### Fixed
 
 - Prevented the Create Profile dialog from reopening when revisiting the Profiles screen.

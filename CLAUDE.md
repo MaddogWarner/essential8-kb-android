@@ -25,15 +25,19 @@ Native Android port of the iOS app *Essential 8 Knowledge Base* — an offline A
 ## Locked stack
 | Concern | Choice |
 |---|---|
-| Language | Kotlin 2.2.20 (bundled with AGP 9 — no separate KGP or Compose-compiler version) |
-| UI | Jetpack Compose, BOM `2026.06.00` → Material3 `1.4.0` |
+| Language | Kotlin 2.4.10 (single `kotlin` version ref drives both the language and the Compose compiler plugin — never bump one without the other) |
+| UI | Jetpack Compose, BOM `2026.08.00` → Material3 `1.4.0` |
 | Architecture | Single `app` module, plain MVVM (Compose UI → ViewModel → static in-memory Kotlin data) |
 | Navigation | No nav library — sealed-class screen state + `when`; `BackHandler` + small back-stack `List` in `App.kt` |
 | Content | Kotlin `data class` / `enum` in code; no JSON, no kotlinx.serialization |
 | Persistence | Jetpack DataStore (Preferences) only |
-| Build | Gradle Kotlin DSL + version catalog, AGP 9.1.x, Gradle 9.1+, JDK 17 |
-| SDK | compileSdk 36 / targetSdk 36 / minSdk 26 |
-| Omit | Hilt · Room · repository layer · Nav Compose/Nav3 · kotlinx.serialization · Espresso · detekt |
+| Build | Gradle Kotlin DSL + version catalog, AGP 9.3.1, Gradle 9.7.0, JDK 17 |
+| SDK | compileSdk 37 / targetSdk 36 / minSdk 26 — compile against the newest APIs, raise `targetSdk` only after a device pass |
+| Omit | Hilt · Room · repository layer · Nav Compose/Nav3 · kotlinx.serialization · detekt |
+
+Versions are Dependabot-maintained; the table records the current state, not a freeze.
+Espresso (`3.7.0`, pinned) is used by the Compose UI tests for Android 15+ input
+compatibility — it is no longer on the omit list.
 
 ---
 
