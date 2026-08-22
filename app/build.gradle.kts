@@ -25,7 +25,7 @@ check(uploadSigningProperties.none { it.isPresent } || uploadSigningConfigured) 
 
 android {
     namespace = "com.maddogwarner.essential8kb"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.maddogwarner.essential8kb"
